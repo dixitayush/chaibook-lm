@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
@@ -284,6 +285,12 @@ export function Landing() {
                       Sign in
                     </Button>
                   )}
+                  <Link href="/privacy" onClick={() => setMenu(false)} className="rounded-xl px-3 py-2.5 text-sm hover:bg-secondary">
+                    Privacy
+                  </Link>
+                  <Link href="/terms" onClick={() => setMenu(false)} className="rounded-xl px-3 py-2.5 text-sm hover:bg-secondary">
+                    Terms
+                  </Link>
                   <Button
                     className="mt-3"
                     onClick={() => {
@@ -507,6 +514,12 @@ export function Landing() {
                 {item.label}
               </a>
             ))}
+            <Link href="/privacy" className="transition hover:text-foreground">
+              Privacy
+            </Link>
+            <Link href="/terms" className="transition hover:text-foreground">
+              Terms
+            </Link>
           </nav>
         </div>
         <p className="mx-auto max-w-6xl px-4 pb-8 text-[11px] tracking-wide text-muted-foreground/80 sm:px-6">

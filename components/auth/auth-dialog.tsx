@@ -112,6 +112,19 @@ export function AuthDialog({
           <Button type="submit" className="w-full" disabled={busy}>
             {busy ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}
           </Button>
+          {mode === "signup" && (
+            <p className="text-center text-[11px] leading-5 text-muted-foreground">
+              By creating a desk you agree to the{" "}
+              <a href="/terms" className="font-medium text-chai hover:underline">
+                Terms
+              </a>{" "}
+              and have read the{" "}
+              <a href="/privacy" className="font-medium text-chai hover:underline">
+                Privacy Policy
+              </a>
+              .
+            </p>
+          )}
         </form>
         <p className="text-center text-sm text-muted-foreground">
           {mode === "signup" ? "Already have a desk?" : "New here?"}{" "}
