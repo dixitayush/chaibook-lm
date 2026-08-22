@@ -216,12 +216,122 @@ function pickTrack(tracks: CaptionTrack[]) {
   return [...tracks].sort((a, b) => score(b) - score(a))[0];
 }
 
+function innertubeHeaders(spec: (typeof INNERTUBE_CLIENTS)[number], videoId?: string) {
+  return {
+    "Content-Type": "application/json",
+    "User-Agent": spec.ua,
+    "X-YouTube-Client-Name": spec.clientId,
+    "X-YouTube-Client-Version": spec.client.clientVersion,
+    Cookie: YT_COOKIE,
+    Origin: "https://www.youtube.com",
+    Referer: videoId ? `https://www.youtube.com/watch?v=${videoId}` : "https://www.youtube.com/",
+    "Accept-Language": "en-US,en;q=0.9",
+  };
+}
+
+function walkJson(value: unknown, visit: (node: Record<string, unknown>) => void, depth = 0) {
+  if (!value || typeof value !== "object" || depth > 40) return;
+  if (Array.isArray(value)) {
+    for (const item of value) walkJson(item, visit, depth + 1);
+    return;
+  }
+  const node = value as Record<string, unknown>;
+  visit(node);
+  for (const child of Object.values(node)) walkJson(child, visit, depth + 1);
+}
+
+function transcriptParamsFrom(data: unknown): string[] {
+  const params: string[] = [];
+  const seen = new Set<string>();
+  walkJson(data, (node) => {
+    const endpoint = node.getTranscriptEndpoint as { params?: string } | undefined;
+    const p = endpoint?.params;
+    if (p && !seen.has(p)) {
+      seen.add(p);
+      params.push(p);
+    }
+  });
+  return params;
+}
+
+function cuesFromTranscriptJson(data: unknown): Cue[] {
+  const cues: Cue[] = [];
+  walkJson(data, (node) => {
+    const seg = node.transcriptSegmentRenderer as
+      | {
+          startMs?: string;
+          endMs?: string;
+          snippet?: { runs?: { text?: string }[] };
+        }
+      | undefined;
+    if (!seg) return;
+    const text = (seg.snippet?.runs ?? [])
+      .map((r) => r.text ?? "")
+      .join("")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!text) return;
+    const start = Number(seg.startMs ?? 0) / 1000;
+    const end = Number(seg.endMs ?? Number(seg.startMs ?? 0) + 2000) / 1000;
+    cues.push({ text, start, end: end > start ? end : start + 2 });
+  });
+  return cues;
+}
+
+async function innertubePost(path: string, spec: (typeof INNERTUBE_CLIENTS)[number], body: unknown, apiKey?: string | null) {
+  const url = apiKey
+    ? `https://www.youtube.com/youtubei/v1/${path}?key=${encodeURIComponent(apiKey)}&prettyPrint=false`
+    : `https://www.youtube.com/youtubei/v1/${path}?prettyPrint=false`;
+  const videoId = typeof body === "object" && body && "videoId" in body ? String((body as { videoId?: string }).videoId ?? "") : "";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: innertubeHeaders(spec, videoId),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) return null;
+  return res.json() as Promise<unknown>;
+}
+
+async function cuesViaGetTranscript(videoId: string, apiKey?: string | null, initial?: unknown): Promise<Cue[]> {
+  const clients = INNERTUBE_CLIENTS.filter((c) => c.name === "WEB" || c.name === "ANDROID" || c.name === "MWEB");
+  const paramSets = [...transcriptParamsFrom(initial)];
+  for (const spec of clients) {
+    if (paramSets.length) break;
+    const next = await innertubePost(
+      "next",
+      spec,
+      { context: { client: spec.client }, videoId },
+      apiKey,
+    );
+    paramSets.push(...transcriptParamsFrom(next));
+  }
+  for (const spec of clients) {
+    for (const params of paramSets) {
+      const data = await innertubePost(
+        "get_transcript",
+        spec,
+        { context: { client: spec.client }, params, videoId },
+        apiKey,
+      );
+      const cues = cuesFromTranscriptJson(data);
+      if (cues.length) return cues;
+    }
+  }
+  return [];
+}
+
 async function fetchCaptionBody(baseUrl: string, fmt: "json3" | "srv3" | "vtt" | "srv1", ua: string) {
   const url = new URL(baseUrl);
   url.searchParams.delete("fmt");
   url.searchParams.set("fmt", fmt);
   const res = await fetch(url.toString(), {
-    headers: { "User-Agent": ua, "Accept-Language": "en-US,en;q=0.9", Cookie: YT_COOKIE },
+    headers: {
+      "User-Agent": ua,
+      "Accept-Language": "en-US,en;q=0.9",
+      Cookie: YT_COOKIE,
+      Origin: "https://www.youtube.com",
+      Referer: "https://www.youtube.com/",
+    },
   });
   if (!res.ok) return "";
   return res.text();
@@ -308,29 +418,17 @@ async function playerViaInnertube(
   spec: (typeof INNERTUBE_CLIENTS)[number],
   apiKey?: string | null,
 ) {
-  const endpoint = apiKey
-    ? `https://www.youtube.com/youtubei/v1/player?key=${encodeURIComponent(apiKey)}&prettyPrint=false`
-    : "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": spec.ua,
-      "X-YouTube-Client-Name": spec.clientId,
-      "X-YouTube-Client-Version": spec.client.clientVersion,
-      Cookie: YT_COOKIE,
-      Origin: "https://www.youtube.com",
-      Referer: `https://www.youtube.com/watch?v=${videoId}`,
-    },
-    body: JSON.stringify({
+  return innertubePost(
+    "player",
+    spec,
+    {
       context: { client: spec.client },
       videoId,
       contentCheckOk: true,
       racyCheckOk: true,
-    }),
-  });
-  if (!res.ok) return null;
-  return res.json() as Promise<unknown>;
+    },
+    apiKey,
+  );
 }
 
 function tracksFromTimedtextList(xml: string, videoId: string): CaptionTrack[] {
@@ -364,50 +462,36 @@ async function tracksViaTimedtext(videoId: string): Promise<CaptionTrack[]> {
     const list = await fetch(`https://www.youtube.com/api/timedtext?type=list&v=${encodeURIComponent(videoId)}`, {
       headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9", Cookie: YT_COOKIE },
     });
-    if (list.ok) {
-      const listed = tracksFromTimedtextList(await list.text(), videoId);
-      if (listed.length) return listed;
-    }
+    if (!list.ok) return [];
+    return tracksFromTimedtextList(await list.text(), videoId);
   } catch {
-    /* fall through to guessed langs */
+    return [];
   }
-  const guesses: CaptionTrack[] = [];
-  for (const [lang, kind] of [
-    ["en", ""],
-    ["en-US", ""],
-    ["en", "asr"],
-    ["en-GB", ""],
-  ] as const) {
-    const url = new URL("https://www.youtube.com/api/timedtext");
-    url.searchParams.set("v", videoId);
-    url.searchParams.set("lang", lang);
-    if (kind) url.searchParams.set("kind", kind);
-    guesses.push({
-      baseUrl: url.toString(),
-      languageCode: lang,
-      kind: kind || undefined,
-      ua: UA,
-    });
-  }
-  return guesses;
 }
 
 async function fetchTranscript(videoId: string): Promise<Cue[]> {
   const collected: CaptionTrack[] = [];
   let blocked = false;
+  let initialData: unknown;
 
   try {
     const watch = await fetchWatchPage(videoId);
     blocked = watch.blocked;
-    const fromHtml = tracksFromPlayer(playerFromWatchHtml(watch.html), UA);
+    initialData = extractAssignedJson(watch.html, "ytInitialData");
+    const player = playerFromWatchHtml(watch.html);
+
+    const panelCues = await cuesViaGetTranscript(videoId, watch.apiKey, initialData);
+    if (panelCues.length) return panelCues;
+
+    const fromHtml = tracksFromPlayer(player, UA);
     collected.push(...fromHtml);
     const htmlCues = await cuesFromTracks(fromHtml);
     if (htmlCues.length) return htmlCues;
 
     for (const spec of INNERTUBE_CLIENTS) {
       try {
-        const player = await playerViaInnertube(videoId, spec, watch.apiKey);
-        const tracks = tracksFromPlayer(player, spec.ua);
+        const remote = await playerViaInnertube(videoId, spec, watch.apiKey);
+        const tracks = tracksFromPlayer(remote, spec.ua);
         collected.push(...tracks);
         const cues = await cuesFromTracks(tracks);
         if (cues.length) return cues;
@@ -416,8 +500,11 @@ async function fetchTranscript(videoId: string): Promise<Cue[]> {
       }
     }
   } catch {
-    /* timedtext still worth a try */
+    /* keep going */
   }
+
+  const innertubeCues = await cuesViaGetTranscript(videoId, null, initialData);
+  if (innertubeCues.length) return innertubeCues;
 
   const timed = await tracksViaTimedtext(videoId);
   collected.push(...timed);
@@ -436,7 +523,7 @@ async function fetchTranscript(videoId: string): Promise<Cue[]> {
     throw new Error("This video has no captions. Auto-captions must be on, or upload a .vtt transcript instead.");
   }
   throw new Error(
-    "YouTube returned a caption track but the text was empty. Try another video, or upload a .vtt / .srt file.",
+    "YouTube listed captions but blocked the text from this server. Upload a .vtt / .srt file, or try a video with official (not auto) captions.",
   );
 }
 
