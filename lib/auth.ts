@@ -90,24 +90,24 @@ export async function requireUser() {
   const user = await getSessionUser();
   if (!user) {
     return {
-      user: null as const,
-      notebook: null as const,
-      source: null as const,
-      role: null as const,
+      user: null,
+      notebook: null,
+      source: null,
+      role: null,
       response: NextResponse.json({ error: "Sign in to continue." }, { status: 401 }),
     };
   }
   const limited = await limitOrResponse(`api:${user.id}`, 180, 60);
   if (limited) {
     return {
-      user: null as const,
-      notebook: null as const,
-      source: null as const,
-      role: null as const,
+      user: null,
+      notebook: null,
+      source: null,
+      role: null,
       response: limited,
     };
   }
-  return { user, notebook: null as const, source: null as const, role: null as const, response: null };
+  return { user, notebook: null, source: null, role: null, response: null };
 }
 
 export async function notebookAccess(user: PublicUser, notebookId: string) {
@@ -129,13 +129,13 @@ export async function requireNotebook(notebookId: string) {
   if (!access) {
     return {
       user: gate.user,
-      notebook: null as const,
-      source: null as const,
-      role: null as const,
+      notebook: null,
+      source: null,
+      role: null,
       response: NextResponse.json({ error: "Notebook not found" }, { status: 404 }),
     };
   }
-  return { user: gate.user, notebook: access.notebook, source: null as const, role: access.role, response: null };
+  return { user: gate.user, notebook: access.notebook, source: null, role: access.role, response: null };
 }
 
 export async function requireNotebookOwner(notebookId: string) {
@@ -145,7 +145,7 @@ export async function requireNotebookOwner(notebookId: string) {
     return {
       user: gate.user,
       notebook: gate.notebook,
-      source: null as const,
+      source: null,
       role: gate.role,
       response: NextResponse.json({ error: "Only the owner can do that." }, { status: 403 }),
     };
@@ -160,9 +160,9 @@ export async function requireSource(sourceId: string) {
   if (!source) {
     return {
       user: gate.user,
-      notebook: null as const,
-      source: null as const,
-      role: null as const,
+      notebook: null,
+      source: null,
+      role: null,
       response: NextResponse.json({ error: "Source not found" }, { status: 404 }),
     };
   }
@@ -170,9 +170,9 @@ export async function requireSource(sourceId: string) {
   if (owned.response) {
     return {
       user: gate.user,
-      notebook: null as const,
-      source: null as const,
-      role: null as const,
+      notebook: null,
+      source: null,
+      role: null,
       response: NextResponse.json({ error: "Source not found" }, { status: 404 }),
     };
   }

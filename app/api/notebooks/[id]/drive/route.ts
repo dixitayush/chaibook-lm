@@ -72,5 +72,5 @@ export async function POST(req: Request, ctx: IdRoute) {
   }
 
   await db.update(notebooks).set({ updatedAt: Date.now() }).where(eq(notebooks.id, id));
-  return NextResponse.json({ sources: created.map(mapSource), imported: created.length });
+  return NextResponse.json({ sources: created.map((row) => mapSource(row)), imported: created.length });
 }

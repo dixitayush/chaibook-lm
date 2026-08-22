@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 
 async function loadChat(notebookId: string) {
   const rows = await db.select().from(messages).where(eq(messages.notebookId, notebookId)).orderBy(asc(messages.createdAt));
-  return rows.map(mapMessage) as ChatMessage[];
+  return rows.map((row) => mapMessage(row)) as ChatMessage[];
 }
 
 export async function GET(_req: Request, ctx: IdRoute) {

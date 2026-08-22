@@ -36,7 +36,7 @@ export async function GET(_req: Request, ctx: IdRoute) {
   const gate = await requireNotebook(id);
   if (gate.response) return gate.response;
   const rows = await db.select().from(sources).where(eq(sources.notebookId, id));
-  return NextResponse.json({ sources: rows.map(mapSource) });
+  return NextResponse.json({ sources: rows.map((row) => mapSource(row)) });
 }
 
 export async function DELETE(_req: Request, ctx: IdRoute) {
@@ -165,7 +165,7 @@ export async function POST(req: Request, ctx: IdRoute) {
         );
       }
       await db.update(notebooks).set({ updatedAt: Date.now() }).where(eq(notebooks.id, id));
-      return NextResponse.json({ sources: created.map(mapSource), playlist: true });
+      return NextResponse.json({ sources: created.map((row) => mapSource(row)), playlist: true });
     }
   }
 
