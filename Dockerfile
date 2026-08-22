@@ -4,8 +4,7 @@ RUN apk add --no-cache libc6-compat
 COPY package.json package-lock.json ./
 # node:22-alpine ships npm 10; this lockfile was generated with npm 11.
 # npm 10 ci fails with "Missing: @emnapi/core@1.11.3 from lock file".
-# --omit=peer skips better-sqlite3 (drizzle optional peer; we use Postgres).
-RUN npm install -g npm@11.6.2 && npm ci --omit=peer
+RUN npm install -g npm@11.6.2 && npm ci
 
 FROM node:22-alpine AS builder
 WORKDIR /app
