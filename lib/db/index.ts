@@ -17,6 +17,7 @@ function resolveUrl() {
 
 const globalForDb = globalThis as unknown as {
   pg?: ReturnType<typeof postgres>;
+  drizzle?: ReturnType<typeof drizzle>;
   schemaReady?: Promise<void>;
   schemaVersion?: number;
 };
@@ -28,8 +29,34 @@ function getSql() {
   return globalForDb.pg;
 }
 
-export const sql = getSql();
-export const db = drizzle(sql, { schema });
+function getDb() {
+  if (!globalForDb.drizzle) {
+    globalForDb.drizzle = drizzle(getSql(), { schema });
+  }
+  return globalForDb.drizzle;
+}
+
+// Lazy: `next build` imports this module to collect page data and must not
+// require DATABASE_URL (the image has no Postgres during the build).
+export const sql: ReturnType<typeof postgres> = new Proxy(function sqlLazy() {} as unknown as ReturnType<typeof postgres>, {
+  apply(_target, _thisArg, argArray) {
+    const client = getSql();
+    return Reflect.apply(client as unknown as (...args: unknown[]) => unknown, client, argArray);
+  },
+  get(_target, prop) {
+    const client = getSql();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+}) as ReturnType<typeof postgres>;
+
+export const db: ReturnType<typeof drizzle> = new Proxy({} as ReturnType<typeof drizzle>, {
+  get(_target, prop) {
+    const instance = getDb();
+    const value = Reflect.get(instance as object, prop, instance);
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
 
 const DDL = `
 CREATE EXTENSION IF NOT EXISTS vector;
