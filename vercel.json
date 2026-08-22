@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "functions": {
+    "app/api/notebooks/[id]/sources/route.ts": { "maxDuration": 60 },
+    "app/api/notebooks/[id]/chat/route.ts": { "maxDuration": 60 },
+    "app/api/notebooks/[id]/studio/route.ts": { "maxDuration": 60 },
+    "app/api/sources/[id]/reindex/route.ts": { "maxDuration": 60 }
+  }
+}

@@ -1,0 +1,17 @@
+.git
+.next
+node_modules
+data
+uploads
+*.md
+!README.md
+.env
+.env.*
+!.env.example
+graphify-out
+*.db
+*.db-shm
+*.db-wal
+Dockerfile
+docker-compose*.yml
+deploy

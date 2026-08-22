@@ -1,0 +1,26 @@
+# Internal-only. TLS and public DNS live on Traefik (the VPS gateway).
+# Caddy has no published ports; Traefik reaches it on the `proxy` network.
+{
+	admin off
+	auto_https off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	encode gzip zstd
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	reverse_proxy app:3000 {
+		flush_interval -1
+		header_up X-Real-IP {http.request.header.X-Forwarded-For}
+		transport http {
+			read_timeout 180s
+			write_timeout 180s
+		}
+	}
+}

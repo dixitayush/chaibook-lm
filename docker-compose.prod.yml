@@ -1,0 +1,109 @@
+name: chaibook
+
+# Public traffic never reaches this stack. Traefik on the `proxy` network is
+# the only process with host ports. Caddy joins `proxy`; app/db/redis stay on
+# `chaibook` only.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chaibook
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chaibook}
+      POSTGRES_DB: chaibook
+    volumes:
+      - chaibook_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chaibook -d chaibook"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - chaibook
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+    volumes:
+      - chaibook_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - chaibook
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      DATABASE_URL: postgres://chaibook:${POSTGRES_PASSWORD:-chaibook}@db:5432/chaibook
+      REDIS_URL: redis://redis:6379
+      APP_URL: ${APP_URL:-https://chaibook.ayushdixit.work}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+    networks:
+      - chaibook
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - chaibook
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.chaibook.rule=Host(`${CHAIBOOK_HOST:-chaibook.ayushdixit.work}`)
+      - traefik.http.routers.chaibook.entrypoints=websecure
+      - traefik.http.routers.chaibook.tls=true
+      - traefik.http.routers.chaibook.tls.certresolver=le
+      - traefik.http.routers.chaibook.middlewares=https-fwd@file,secure-headers@file
+      - traefik.http.services.chaibook.loadbalancer.server.port=80
+      - traefik.http.services.chaibook.loadbalancer.passhostheader=true
+
+networks:
+  chaibook:
+    name: chaibook_internal
+    driver: bridge
+  proxy:
+    external: true
+    name: proxy
+
+volumes:
+  chaibook_pg:
+  chaibook_redis:
