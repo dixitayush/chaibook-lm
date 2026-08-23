@@ -1,4 +1,4 @@
-import { hydrateEnv } from "@/lib/env";
+import { hydrateEnv, publicOrigin } from "@/lib/env";
 
 export function mailConfigured() {
   hydrateEnv();
@@ -38,6 +38,5 @@ export async function sendMail(opts: { to: string; subject: string; html: string
 }
 
 export function appOrigin() {
-  hydrateEnv();
-  return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  return publicOrigin();
 }

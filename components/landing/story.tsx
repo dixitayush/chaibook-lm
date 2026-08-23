@@ -293,7 +293,7 @@ const MARQUEE = [
   "Memory",
 ];
 
-export function Hero({ onStart }: { onStart: () => void }) {
+export function Hero({ onStart, deskReady }: { onStart: () => void; deskReady?: boolean }) {
   return (
     <section className="relative pt-12 pb-6 sm:pt-16">
       <div className="pointer-events-none absolute -top-6 left-[12%] hidden sm:block">
@@ -346,8 +346,8 @@ export function Hero({ onStart }: { onStart: () => void }) {
               <PlusIcon data-icon="inline-start" />
               Start a notebook
             </Button>
-            <a href="#flow" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-12 w-full rounded-full px-6 sm:w-auto")}>
-              See the flow
+            <a href={deskReady ? "#notebooks" : "#flow"} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-12 w-full rounded-full px-6 sm:w-auto")}>
+              {deskReady ? "Your desk" : "See the flow"}
               <motion.span
                 animate={{ x: [0, 4, 0] }}
                 transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { gmailAccounts } from "@/lib/db/schema";
 import { createId } from "@/lib/id";
-import { hydrateEnv } from "@/lib/env";
+import { hydrateEnv, publicOrigin, sanitizePublicOrigin } from "@/lib/env";
 import { formatEmailDocument, parseEmailInput, type ParsedEmail } from "@/lib/ingest/email";
 import { cleanMailBody, htmlToReadableText, isWeakPlaintext } from "@/lib/ingest/mail-clean";
 
@@ -21,12 +21,11 @@ export function googleOAuthConfigured() {
 
 export const gmailOAuthConfigured = googleOAuthConfigured;
 
-function appUrl() {
-  hydrateEnv();
-  return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+function appUrl(req?: Request) {
+  return publicOrigin(req);
 }
 
-export function redirectUri(_origin?: string) {
+export function redirectUri() {
   return `${appUrl()}/api/gmail/callback`;
 }
 
@@ -45,7 +44,7 @@ export function decodeLoginState(state: string) {
       o?: string;
       s?: string;
     };
-    if (parsed.t === "login" && parsed.s) return { origin: parsed.o || appUrl(), csrf: parsed.s };
+    if (parsed.t === "login" && parsed.s) return { origin: sanitizePublicOrigin(parsed.o), csrf: parsed.s };
   } catch {
     /* not a login state */
   }
@@ -59,7 +58,7 @@ export function decodeGmailState(state: string) {
       o?: string;
       k?: string;
     };
-    if (parsed.n) return { notebookId: parsed.n, origin: parsed.o || appUrl(), kind: parsed.k || "" };
+    if (parsed.n) return { notebookId: parsed.n, origin: sanitizePublicOrigin(parsed.o), kind: parsed.k || "" };
   } catch {
     /* older callback: notebook id only */
   }
@@ -68,7 +67,7 @@ export function decodeGmailState(state: string) {
 
 export function gmailAuthUrl(notebookId: string, origin?: string, kind?: string) {
   hydrateEnv();
-  const from = (origin || appUrl()).replace(/\/$/, "");
+  const from = sanitizePublicOrigin(origin);
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
     redirect_uri: redirectUri(),

@@ -7,7 +7,7 @@
 !.yarn/releases
 !.yarn/versions
 /coverage
-/.next/
+.next/
 /out/
 /build
 .DS_Store
@@ -30,3 +30,5 @@ next-env.d.ts
 *.db
 *.db-shm
 *.db-wal
+graphify-out/
+.graphify_python

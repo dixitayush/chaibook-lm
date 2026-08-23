@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { ensureSchema } from "@/lib/db";
+import { sanitizePublicOrigin } from "@/lib/env";
 import { decodeGmailState, decodeLoginState, exchangeGmailCode } from "@/lib/gmail";
 import { finishGoogleLogin } from "@/lib/google-login";
 
@@ -15,7 +16,8 @@ export async function GET(req: Request) {
   const login = decodeLoginState(rawState);
   if (login) return finishGoogleLogin(code, err, login.csrf);
 
-  const { notebookId, origin, kind } = decodeGmailState(rawState);
+  const { notebookId, origin: rawOrigin, kind } = decodeGmailState(rawState);
+  const origin = sanitizePublicOrigin(rawOrigin, req);
   const dest = `${origin.replace(/\/$/, "")}/notebooks/${notebookId}`;
   const suffix = kind ? `&kind=${encodeURIComponent(kind)}` : "";
   const user = await getSessionUser();

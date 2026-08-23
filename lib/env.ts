@@ -52,6 +52,59 @@ export function hydrateEnv() {
   }
 }
 
+const BIND_HOSTS = new Set(["0.0.0.0", "::"]);
+
+function hostnameOf(value: string): string {
+  try {
+    return new URL(value.includes("://") ? value : `http://${value}`).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function isBindHost(value: string): boolean {
+  return BIND_HOSTS.has(hostnameOf(value));
+}
+
+function originFromHeaders(req?: Request): string | null {
+  if (!req) return null;
+  const host = (req.headers.get("x-forwarded-host") || req.headers.get("host") || "")
+    .split(",")[0]
+    .trim();
+  if (!host || isBindHost(host)) return null;
+  const proto =
+    (req.headers.get("x-forwarded-proto") || "").split(",")[0].trim() ||
+    (process.env.NODE_ENV === "production" ? "https" : "http");
+  return `${proto}://${host}`.replace(/\/$/, "");
+}
+
+/** Browser-reachable origin. Never the Next.js bind address (0.0.0.0 / ::). */
+export function publicOrigin(req?: Request): string {
+  hydrateEnv();
+  // Prefer the host the browser actually used. Next.js standalone sets
+  // HOSTNAME=0.0.0.0, so `new URL(req.url).origin` becomes https://0.0.0.0:3000.
+  const fromReq = originFromHeaders(req);
+  if (fromReq) return fromReq;
+
+  const configured = (process.env.APP_URL || "").trim().replace(/\/$/, "");
+  if (configured && !isBindHost(configured)) return configured;
+
+  return "http://localhost:3000";
+}
+
+export function sanitizePublicOrigin(origin: string | undefined, req?: Request): string {
+  const fallback = publicOrigin(req);
+  if (!origin?.trim()) return fallback;
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return fallback;
+    if (isBindHost(url.hostname)) return fallback;
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return fallback;
+  }
+}
+
 export function hydrateLlmEnv() {
   hydrateEnv();
 }

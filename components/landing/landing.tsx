@@ -1,22 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import {
-  PlusIcon,
-  SearchIcon,
-  Trash2Icon,
-  PencilIcon,
-  BookOpenIcon,
-  MenuIcon,
-  LogOutIcon,
-} from "lucide-react";
+import { PlusIcon, MenuIcon, LogOutIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Notebook } from "@/lib/types";
-import { cn, formatRelative, initials } from "@/lib/utils";
+import { cn, initials } from "@/lib/utils";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -26,16 +18,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AuthDialog, type AuthUser } from "@/components/auth/auth-dialog";
 import { Hero, Story } from "./story";
+import { NotebookDesk } from "./notebook-desk";
 
 const EMOJIS = ["🍵", "📖", "🔬", "🧠", "🎬", "🧭", "🧪", "🌙", "✒️", "🪐"];
 
 const NAV = [
+  { href: "#notebooks", label: "Your desk" },
   { href: "#flow", label: "How it works" },
   { href: "#imports", label: "Gmail & Drive" },
   { href: "#privacy", label: "Leave no crumbs" },
   { href: "#guide", label: "How to use" },
   { href: "#faq", label: "FAQ" },
-  { href: "#notebooks", label: "Notebooks" },
 ];
 
 export function Landing() {
@@ -112,11 +105,6 @@ export function Landing() {
     }
   }, [user]);
 
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase();
-    return notebooks.filter((n) => !q || n.title.toLowerCase().includes(q) || n.description.toLowerCase().includes(q));
-  }, [notebooks, query]);
-
   function requestCreate() {
     if (!user) {
       sessionStorage.setItem("chaibook_auth_next", "create");
@@ -171,7 +159,7 @@ export function Landing() {
         href="#notebooks"
         className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2"
       >
-        Skip to notebooks
+        Skip to your desk
       </a>
       <div className="pointer-events-none absolute inset-0 chai-glow" />
       <div className="pointer-events-none absolute inset-0 chai-grid" />
@@ -309,7 +297,18 @@ export function Landing() {
       </header>
 
       <main id="top" className="relative mx-auto max-w-6xl px-4 pb-28 sm:px-6">
-        <Hero onStart={requestCreate} />
+        <Hero onStart={requestCreate} deskReady={Boolean(user && notebooks.length)} />
+
+        <NotebookDesk
+          notebooks={notebooks}
+          query={query}
+          onQuery={setQuery}
+          loading={loading}
+          signedIn={Boolean(user)}
+          onCreate={requestCreate}
+          onReload={() => void load()}
+          onRemove={(id) => void remove(id)}
+        />
 
         {!postgres && (
           <p className="mb-4 rounded-2xl border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm leading-6">
@@ -323,134 +322,6 @@ export function Landing() {
         )}
 
         <Story />
-
-        <section id="notebooks" className="scroll-mt-24 pt-24">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
-          >
-            <div>
-              <p className="text-sm font-medium tracking-[0.18em] text-chai uppercase">Your desk</p>
-              <h2 className="mt-2 font-heading text-3xl tracking-tight text-balance sm:text-4xl">Notebooks</h2>
-              <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-                Each notebook is a library on your account. Share one by email and it appears on their desk too.
-              </p>
-            </div>
-            <div className="relative w-full sm:max-w-xs">
-              <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="h-10 rounded-full border-border/80 bg-card/80 pl-8 shadow-none"
-                placeholder="Search notebooks"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-          </motion.div>
-
-          {loading ? (
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="surface h-44 animate-pulse rounded-3xl" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <motion.button
-              type="button"
-              onClick={requestCreate}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="surface mt-8 flex w-full flex-col items-center justify-center rounded-[1.75rem] border-dashed px-6 py-20 text-center transition hover:border-chai/50 hover:bg-card"
-            >
-              <span className="grid size-14 place-items-center rounded-2xl bg-secondary text-chai">
-                <BookOpenIcon className="size-7" />
-              </span>
-              <p className="mt-4 font-heading text-2xl sm:text-3xl">
-                {user ? "Start with one notebook" : "Sign in to pour a notebook"}
-              </p>
-              <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-                {user
-                  ? "Add sources, ask a question, and follow the citations."
-                  : "Google or email and password. Your library stays on your account."}
-              </p>
-              <span className="mt-5 inline-flex h-9 items-center rounded-full bg-chai px-4 text-sm font-medium text-chai-foreground">
-                {user ? "Create notebook" : "Sign in"}
-              </span>
-            </motion.button>
-          ) : (
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((nb, i) => (
-                <motion.article
-                  key={nb.id}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05, duration: 0.35 }}
-                  whileHover={{ y: -5 }}
-                  className="surface group relative overflow-hidden rounded-3xl p-5 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-chai before:opacity-0 before:transition-opacity group-hover:before:opacity-100"
-                >
-                  <button type="button" className="absolute inset-0" onClick={() => router.push(`/notebooks/${nb.id}`)} />
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="grid size-11 place-items-center rounded-2xl bg-secondary text-xl ring-1 ring-border/60">
-                      {nb.emoji}
-                    </span>
-                    <div className="relative z-10 flex gap-1 opacity-100 sm:opacity-0 sm:transition sm:group-hover:opacity-100">
-                      {nb.role !== "collaborator" && (
-                        <>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Rename ${nb.title}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const next = window.prompt("Rename notebook", nb.title);
-                          if (!next) return;
-                          void api(`/api/notebooks/${nb.id}`, { method: "PATCH", body: JSON.stringify({ title: next }) }).then(load);
-                        }}
-                      >
-                        <PencilIcon />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Delete ${nb.title}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm("Delete this notebook? Sources, chat, vectors, and memory go with it.")) void remove(nb.id);
-                        }}
-                      >
-                        <Trash2Icon />
-                      </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <h3 className="mt-4 font-heading text-2xl leading-tight wrap-break-word">{nb.title}</h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{nb.description || "No description yet."}</p>
-                  {nb.role === "collaborator" && (
-                    <p className="mt-2 inline-flex rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium tracking-wide text-chai uppercase">
-                      Shared{nb.ownerName ? ` by ${nb.ownerName}` : ""}
-                    </p>
-                  )}
-                  <div className="mt-5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                    <span>
-                      {nb.readyCount ?? 0}/{nb.sourceCount ?? 0} ready
-                    </span>
-                    <span className="shrink-0">{formatRelative(nb.updatedAt)}</span>
-                  </div>
-                  <div className="mt-3 h-1 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn("h-full rounded-full bg-chai transition-all", (nb.sourceCount ?? 0) === 0 && "w-0")}
-                      style={{
-                        width: `${nb.sourceCount ? Math.round(((nb.readyCount ?? 0) / (nb.sourceCount || 1)) * 100) : 0}%`,
-                      }}
-                    />
-                  </div>
-                </motion.article>
-              ))}
-            </div>
-          )}
-        </section>
 
         <motion.section
           initial={{ opacity: 0, y: 20 }}

@@ -17,6 +17,8 @@
 	}
 	reverse_proxy app:3000 {
 		flush_interval -1
+		header_up Host {http.request.host}
+		header_up X-Forwarded-Host {http.request.host}
 		header_up X-Real-IP {http.request.header.X-Forwarded-For}
 		transport http {
 			read_timeout 180s

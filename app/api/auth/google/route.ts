@@ -2,11 +2,11 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { encodeLoginState, googleOAuthConfigured, redirectUri } from "@/lib/gmail";
-import { hydrateEnv } from "@/lib/env";
+import { hydrateEnv, publicOrigin } from "@/lib/env";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!googleOAuthConfigured()) {
     return NextResponse.json(
       { error: "Set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to sign in with Google." },
@@ -14,7 +14,7 @@ export async function GET() {
     );
   }
   hydrateEnv();
-  const origin = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const origin = publicOrigin(req);
   const csrf = randomBytes(16).toString("hex");
   const store = await cookies();
   store.set("chaibook_oauth", csrf, {

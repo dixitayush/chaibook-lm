@@ -1,12 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createSession, upsertGoogleUser } from "@/lib/auth";
-import { hydrateEnv } from "@/lib/env";
+import { hydrateEnv, publicOrigin } from "@/lib/env";
 import { redirectUri } from "@/lib/gmail";
 
 function homeUrl() {
-  hydrateEnv();
-  return (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  return publicOrigin();
 }
 
 export async function finishGoogleLogin(code: string | null, err: string | null, csrf: string) {

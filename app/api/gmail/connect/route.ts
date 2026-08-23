@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireNotebook } from "@/lib/auth";
 import { ensureSchema } from "@/lib/db";
+import { publicOrigin } from "@/lib/env";
 import { gmailAuthUrl, gmailOAuthConfigured } from "@/lib/gmail";
 
 export const runtime = "nodejs";
@@ -19,5 +20,5 @@ export async function GET(req: Request) {
   if (!notebookId) return NextResponse.json({ error: "notebookId is required" }, { status: 400 });
   const gate = await requireNotebook(notebookId);
   if (gate.response) return gate.response;
-  return NextResponse.redirect(gmailAuthUrl(notebookId, url.origin, kind));
+  return NextResponse.redirect(gmailAuthUrl(notebookId, publicOrigin(req), kind));
 }
