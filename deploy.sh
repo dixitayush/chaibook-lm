@@ -70,6 +70,7 @@ fi
 
 CHAIBOOK_HOST="${CHAIBOOK_HOST:-$(env_get .env CHAIBOOK_HOST)}"
 APP_URL="${APP_URL:-$(env_get .env APP_URL)}"
+MAIL_FROM="${MAIL_FROM:-$(env_get .env MAIL_FROM)}"
 OPENAI_API_KEY="${OPENAI_API_KEY:-$(env_get .env OPENAI_API_KEY)}"
 GEMINI_API_KEY="${GEMINI_API_KEY:-$(env_get .env GEMINI_API_KEY)}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(env_get .env POSTGRES_PASSWORD)}"
@@ -122,8 +123,13 @@ fi
   die "Set OPENAI_API_KEY or GEMINI_API_KEY in .env."
 [[ -n "${POSTGRES_PASSWORD:-}" ]] || die "Set POSTGRES_PASSWORD."
 
+if [[ -z "${MAIL_FROM:-}" || "$MAIL_FROM" == *"@example.com"* ]]; then
+  MAIL_FROM="ChaiBook LM <hello@${CHAIBOOK_HOST}>"
+fi
+
 upsert_env .env CHAIBOOK_HOST "$CHAIBOOK_HOST"
 upsert_env .env APP_URL "$APP_URL"
+upsert_env .env MAIL_FROM "$MAIL_FROM"
 upsert_env .env POSTGRES_PASSWORD "$POSTGRES_PASSWORD"
 upsert_env .env AUTH_SECRET "$AUTH_SECRET"
 [[ -n "${OPENAI_API_KEY:-}" ]] && upsert_env .env OPENAI_API_KEY "$OPENAI_API_KEY"
