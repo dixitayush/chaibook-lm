@@ -148,9 +148,14 @@ export function Landing() {
   }
 
   async function remove(id: string) {
-    await api(`/api/notebooks/${id}`, { method: "DELETE" });
-    setNotebooks((n) => n.filter((x) => x.id !== id));
-    toast.success("Notebook deleted");
+    try {
+      await api(`/api/notebooks/${id}`, { method: "DELETE" });
+      setNotebooks((n) => n.filter((x) => x.id !== id));
+      toast.success("Notebook deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete notebook");
+      throw err;
+    }
   }
 
   return (
@@ -307,7 +312,7 @@ export function Landing() {
           signedIn={Boolean(user)}
           onCreate={requestCreate}
           onReload={() => void load()}
-          onRemove={(id) => void remove(id)}
+          onRemove={remove}
         />
 
         {!postgres && (

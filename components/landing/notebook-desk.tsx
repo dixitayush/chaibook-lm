@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Notebook } from "@/lib/types";
 import { cn, formatRelative } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SteamWisp } from "./motion-bits";
@@ -51,7 +52,7 @@ type DeskProps = {
   signedIn: boolean;
   onCreate: () => void;
   onReload: () => void;
-  onRemove: (id: string) => void;
+  onRemove: (id: string) => void | Promise<void>;
 };
 
 export function NotebookDesk({
@@ -65,6 +66,7 @@ export function NotebookDesk({
   onRemove,
 }: DeskProps) {
   const router = useRouter();
+  const [pendingDelete, setPendingDelete] = useState<Notebook | null>(null);
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     return notebooks
@@ -169,7 +171,7 @@ export function NotebookDesk({
               notebook={featured}
               onOpen={() => router.push(`/notebooks/${featured.id}`)}
               onRename={() => void rename(featured)}
-              onRemove={() => onRemove(featured.id)}
+              onRemove={() => setPendingDelete(featured)}
             />
             {shelf.length > 0 && (
               <div className="grid content-start gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -180,7 +182,7 @@ export function NotebookDesk({
                     index={i}
                     onOpen={() => router.push(`/notebooks/${nb.id}`)}
                     onRename={() => void rename(nb)}
-                    onRemove={() => onRemove(nb.id)}
+                    onRemove={() => setPendingDelete(nb)}
                   />
                 ))}
               </div>
@@ -188,6 +190,18 @@ export function NotebookDesk({
           </div>
         )}
       </motion.div>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        title="Delete this notebook?"
+        description="Sources, chat, vectors, and memory go with it. This cannot be undone."
+        onConfirm={async () => {
+          if (!pendingDelete) return;
+          await onRemove(pendingDelete.id);
+        }}
+      />
     </section>
   );
 }
@@ -263,13 +277,22 @@ function FeaturedCard({
       <motion.div
         animate={{ rotateX: tilt.x, rotateY: tilt.y }}
         transition={{ type: "spring", stiffness: 180, damping: 20 }}
+        role="link"
+        tabIndex={0}
+        aria-label={`Open ${notebook.title}`}
+        onClick={onOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onOpen();
+          }
+        }}
         className={cn(
-          "surface desk-shine group relative overflow-hidden rounded-[1.75rem] bg-linear-to-br p-6 sm:p-7",
+          "surface desk-shine group relative cursor-pointer overflow-hidden rounded-[1.75rem] bg-linear-to-br p-6 sm:p-7",
           wash(notebook.id),
         )}
         style={{ transformStyle: "preserve-3d" }}
       >
-        <button type="button" className="absolute inset-0 z-0" onClick={onOpen} aria-label={`Open ${notebook.title}`} />
         <div className="relative z-10 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <motion.span
@@ -311,10 +334,17 @@ function FeaturedCard({
               />
             </div>
           </div>
-          <span className="inline-flex h-10 items-center rounded-full bg-chai px-4 text-sm font-medium text-chai-foreground shadow-[0_12px_28px_-16px_var(--chai)]">
+          <button
+            type="button"
+            className="inline-flex h-10 items-center rounded-full bg-chai px-4 text-sm font-medium text-chai-foreground shadow-[0_12px_28px_-16px_var(--chai)]"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen();
+            }}
+          >
             Continue
             <ArrowRightIcon className="ml-1.5 size-4" />
-          </span>
+          </button>
         </div>
       </motion.div>
     </motion.article>
@@ -341,9 +371,18 @@ function ShelfCard({
       animate={{ opacity: 1, y: 0, rotate: lean(notebook.id) }}
       transition={{ delay: 0.12 + index * 0.07, duration: 0.5, ease }}
       whileHover={{ y: -8, rotate: 0, scale: 1.02 }}
-      className="surface group relative overflow-hidden rounded-3xl p-4"
+      role="link"
+      tabIndex={0}
+      aria-label={`Open ${notebook.title}`}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className="surface group relative cursor-pointer overflow-hidden rounded-3xl p-4"
     >
-      <button type="button" className="absolute inset-0 z-0" onClick={onOpen} aria-label={`Open ${notebook.title}`} />
       <div className="relative z-10 flex items-start gap-3">
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-secondary text-xl ring-1 ring-border/70">
           {notebook.emoji}
@@ -387,6 +426,9 @@ function CardActions({
         "relative z-10 flex gap-1 opacity-100 sm:opacity-0 sm:transition sm:group-hover:opacity-100",
         compact && "flex-col",
       )}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
     >
       <Button
         variant="ghost"
@@ -405,7 +447,7 @@ function CardActions({
         aria-label={`Delete ${notebook.title}`}
         onClick={(e) => {
           e.stopPropagation();
-          if (confirm("Delete this notebook? Sources, chat, vectors, and memory go with it.")) onRemove();
+          onRemove();
         }}
       >
         <Trash2Icon />
