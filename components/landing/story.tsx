@@ -26,7 +26,6 @@ import {
   BriefcaseIcon,
   LibraryIcon,
   Volume2Icon,
-  CheckIcon,
   ChevronDownIcon,
   PlusIcon,
   ArrowRightIcon,
@@ -34,10 +33,10 @@ import {
   HourglassIcon,
   MousePointerClickIcon,
   InboxIcon,
-  Trash2Icon,
   EraserIcon,
   BookXIcon,
   WindIcon,
+  SmartphoneIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -51,73 +50,63 @@ const fadeUp = {
   transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const },
 };
 
-const STEPS = [
+const FLOW = [
   {
-    n: "01",
-    title: "Open a notebook",
-    body: "One topic, one library. Sources never leak into another notebook — a course, a paper, and a side project stay apart.",
+    icon: BookMarkedIcon,
+    title: "Open one notebook",
+    cue: "One topic, one library",
+    body: "A course, a paper, and a side project stay apart. Sources never leak into another notebook.",
   },
   {
-    n: "02",
-    title: "Add what you are studying",
-    body: "PDFs, websites, YouTube, captions, notes — plus Gmail, Google Calendar, and Drive when you connect Google. Wait until the card says Ready — that is when it can be asked.",
+    icon: HourglassIcon,
+    title: "Pour sources in",
+    cue: "Wait until Ready",
+    body: "PDFs, websites, YouTube, notes — plus Gmail, Calendar, and Drive. Chat unlocks when the first source is Ready, or when you connect a tool.",
   },
   {
-    n: "03",
-    title: "Ask in text or voice",
-    body: "Type, or hold the mic. Answers stream with citations. Only two or three sources show under the reply; the rest still inform the writing.",
+    icon: MessageSquareIcon,
+    title: "Ask something you could highlight",
+    cue: "Point, don’t vacuum",
+    body: "Type, or hold the mic. “Where is X defined?” beats “summarize everything.” Answers stream with citations.",
   },
   {
-    n: "04",
-    title: "Check the passage",
-    body: "Tap a citation. A PDF jumps to the page. A video starts at the timestamp and plays. A note highlights the excerpt.",
+    icon: MousePointerClickIcon,
+    title: "Open the passage",
+    cue: "Tap [n]",
+    body: "A PDF jumps to the page. A video starts at the timestamp. A note highlights the excerpt. Two or three sources show under the reply — the rest still inform the writing.",
   },
   {
-    n: "05",
-    title: "Study in Studio",
-    body: "Turn the same corpus into a two-host podcast, a YouTube roadmap, flashcards, a FAQ, or a briefing — without leaving the desk.",
+    icon: MicIcon,
+    title: "Speak and listen",
+    cue: "The desk has a voice",
+    body: "The mic fills the composer. The speaker writes a spoken summary — it does not read the page aloud.",
   },
   {
-    n: "06",
-    title: "Pin what should last",
-    body: "Follow-ups remember the thread. Pin a fact so the next question does not forget what you already established.",
+    icon: LayersIcon,
+    title: "Study, then pin",
+    cue: "Studio + memory",
+    body: "Turn the same corpus into a podcast, roadmap, flashcards, FAQ, or briefing. Pin a fact so the next question does not forget it.",
   },
 ];
 
 const SOURCES = [
-  { icon: FileTextIcon, title: "PDFs", body: "Opens on the cited page." },
-  { icon: GlobeIcon, title: "Websites", body: "Paste a public URL." },
-  { icon: ClapperboardIcon, title: "YouTube", body: "Plays from the timestamp." },
-  { icon: CaptionsIcon, title: "Captions", body: "VTT or SRT transcripts." },
-  { icon: StickyNoteIcon, title: "Notes", body: "Paste text any time." },
-  { icon: MailIcon, title: "Email", body: "Paste, .eml, or import from Gmail." },
-  { icon: CalendarIcon, title: "Calendar", body: ".ics or import Google Calendar." },
-  { icon: FolderIcon, title: "Drive", body: "Browse a folder, tick the files." },
-  { icon: PlugIcon, title: "MCP tools", body: "GitHub, Jira, Postgres, JSON." },
+  { icon: FileTextIcon, title: "PDFs", hint: "Opens on the cited page" },
+  { icon: GlobeIcon, title: "Websites", hint: "Paste a public URL" },
+  { icon: ClapperboardIcon, title: "YouTube", hint: "Plays from the timestamp" },
+  { icon: CaptionsIcon, title: "Captions", hint: "VTT or SRT transcripts" },
+  { icon: StickyNoteIcon, title: "Notes", hint: "Paste text any time" },
+  { icon: MailIcon, title: "Email", hint: "Paste, .eml, or Gmail" },
+  { icon: CalendarIcon, title: "Calendar", hint: ".ics or Google Calendar" },
+  { icon: FolderIcon, title: "Drive", hint: "Tick the files you want" },
+  { icon: PlugIcon, title: "MCP tools", hint: "GitHub, Jira, Postgres" },
 ];
 
-const GOOGLE_IMPORTS = [
-  {
-    icon: InboxIcon,
-    mark: "01",
-    title: "Gmail",
-    cue: "The thread you meant to study",
-    body: "Connect once. Pick messages — they become sources in this notebook, not a second inbox. Marketing chrome is stripped so the model reads the letter, not the footer.",
-  },
-  {
-    icon: CalendarIcon,
-    mark: "02",
-    title: "Calendar",
-    cue: "Meetings have a paper trail",
-    body: "Import Google Calendar or drop an .ics. Events land as a readable source you can ask against — who, when, and what was on the docket.",
-  },
-  {
-    icon: FolderIcon,
-    mark: "03",
-    title: "Google Drive",
-    cue: "Only the files you tick",
-    body: "Walk a folder. Check Docs, Sheets, Slides, PDFs, or text. ChaiBook indexes what you choose — nothing else in the drive walks in uninvited.",
-  },
+const SOURCE_LEAN = [-2.4, 1.8, -1.1, 2.2, -1.6, 0.8, -2, 1.4, -0.6];
+
+const GOOGLE = [
+  { icon: InboxIcon, title: "Gmail", body: "Pick threads. Marketing chrome is stripped so the model reads the letter." },
+  { icon: CalendarIcon, title: "Calendar", body: "Events land as a readable source — who, when, and what was on the docket." },
+  { icon: FolderIcon, title: "Drive", body: "Walk a folder. Check Docs, Sheets, Slides, PDFs. Nothing else walks in." },
 ];
 
 const WIPE = [
@@ -125,58 +114,19 @@ const WIPE = [
     icon: EraserIcon,
     title: "Delete a source",
     crumb: "The leaf leaves the cup",
-    body: "Indexed vectors for that file go first. Memory, episodes, and graph nodes tagged to it follow. Remove the last source and Studio artifacts leave with the empty cupboard.",
+    body: "Its vectors, tagged memory, and graph nodes go with it. Empty the cupboard and Studio artifacts leave too.",
   },
   {
     icon: WindIcon,
     title: "Clear a chat",
     crumb: "The steam forgets the kettle",
-    body: "The thread, chat-derived memory, episode embeddings, the knowledge graph, and Studio artifacts — podcast, FAQ, flashcards, briefing, roadmap — vanish. Sources and facts you pinned stay on the desk.",
+    body: "The thread, episodes, graph, and Studio vanish. Sources and facts you pinned stay on the desk.",
   },
   {
     icon: BookXIcon,
     title: "Delete a notebook",
     crumb: "The cupboard is empty",
-    body: "The whole library goes: sources, chat, Studio artifacts, chunks, memory, graph, and the notebook’s Mem0 records. Nothing from this desk lingers for the next one.",
-  },
-];
-
-const GUIDE = [
-  {
-    icon: BookMarkedIcon,
-    title: "One notebook, one subject",
-    cue: "Keep the library pure",
-    body: "Keep a course, a paper, or a project isolated so answers do not mix unrelated files.",
-  },
-  {
-    icon: HourglassIcon,
-    title: "Wait for Ready",
-    cue: "Indexing is the kettle",
-    body: "Chat stays locked until the first source finishes indexing — or until you connect a tool in Studio. Status on the card is the signal.",
-  },
-  {
-    icon: MessageSquareIcon,
-    title: "Ask a concrete question",
-    cue: "Point, don’t vacuum",
-    body: "“Where is X defined?” beats “summarize everything.” You will get a tighter, cited reply.",
-  },
-  {
-    icon: MousePointerClickIcon,
-    title: "Verify with a tap",
-    cue: "Open the page",
-    body: "Inline [n] chips and the two–three source cards under the answer open the original passage.",
-  },
-  {
-    icon: MicIcon,
-    title: "Speak and listen",
-    cue: "The desk has a voice",
-    body: "Mic fills the composer. The speaker on an answer writes a spoken summary — it does not read the page aloud.",
-  },
-  {
-    icon: LayersIcon,
-    title: "Studio after sources",
-    cue: "Study from the same pile",
-    body: "Podcast, roadmap, cards, and briefing are generated only from this notebook’s files.",
+    body: "Files, chat, chunks, memory, Studio, and Mem0 records scoped to it — the whole library leaves.",
   },
 ];
 
@@ -186,86 +136,47 @@ const USE_CASES = [
     title: "Exam prep",
     eyebrow: "Students",
     body: "Drop lecture PDFs and a playlist. Ask for definitions, generate flashcards, then play the podcast on a commute.",
-    points: ["Cited answers for last-minute checks", "Flashcards from the same notes", "Roadmap through course videos"],
-    wide: true,
   },
   {
     icon: FlaskConicalIcon,
     title: "Reading a paper",
     eyebrow: "Researchers",
     body: "Load the PDF and related pages. Ask where a claim is stated, jump to the page, pin the result for the next meeting.",
-    points: ["Page-accurate citations", "Pin findings into memory"],
   },
   {
     icon: LibraryIcon,
     title: "A YouTube course",
     eyebrow: "Self-learners",
-    body: "Paste a playlist. ChaiBook indexes public videos, then a roadmap walks concepts in order — click a node and the clip plays.",
-    points: ["Timestamped citations", "Autoplay from the cited moment"],
+    body: "Paste a playlist. A roadmap walks concepts in order — click a node and the clip plays from the cited moment.",
   },
   {
     icon: BriefcaseIcon,
     title: "A briefing, not a guess",
     eyebrow: "Teams",
-    body: "Paste notes, pull Gmail threads, calendar, Drive files, and links. Ask for a synthesis, export the chat, or generate a briefing you can send — every claim still has a source.",
-    points: ["Gmail, Calendar, and Drive import", "Notebook-scoped answers"],
+    body: "Pull Gmail, calendar, Drive, and notes. Ask for a synthesis or generate a briefing you can send — every claim still has a source.",
   },
-];
-
-const FEATURES = [
-  { icon: MessageSquareIcon, title: "Cited chat", body: "Answers come from your sources. Tap a citation to see the passage." },
-  { icon: MicIcon, title: "Ask by voice", body: "Dictate a question. The mic fills the composer in Chrome, Edge, or Safari." },
-  { icon: Volume2Icon, title: "Spoken summary", body: "The speaker rewrites the answer for listening — short, natural, no citation numbers." },
-  { icon: EyeIcon, title: "Source viewer", body: "Open the PDF page, webpage, or video clip the answer used. YouTube starts playing." },
-  { icon: HeadphonesIcon, title: "Podcast", body: "Aarav and Meera host an audio overview generated only from this notebook." },
-  { icon: MapIcon, title: "Learning roadmap", body: "A path through your YouTube sources, pinned to the moment each idea appears." },
-  { icon: LayersIcon, title: "Flashcards & briefing", body: "Study cards, a FAQ, and a briefing — all from this notebook only." },
-  { icon: BrainIcon, title: "Memory", body: "Pin facts and keep the thread. Follow-ups remember what you already established." },
-  { icon: InboxIcon, title: "Gmail, Calendar, Drive", body: "Connect Google once. Import mail, events, or files you pick — they stay inside this notebook." },
-  { icon: PlugIcon, title: "External tools", body: "Connect GitHub, Jira, Postgres, or paste Claude / VS Code MCP JSON. Chat can call them live." },
-  { icon: Trash2Icon, title: "Wipe on delete", body: "Remove a source, chat, or notebook and its vectors, memory, graph, and Studio artifacts leave with it." },
 ];
 
 const FAQ = [
-  {
-    q: "What is ChaiBook LM?",
-    a: "A notebook-scoped research desk. You add sources, ask questions, and every answer is supposed to point back to a page, a clip, or a note — not the open web.",
-  },
   {
     q: "Will it invent facts?",
     a: "It is instructed to stay inside your sources and to refuse when they do not cover the question. Always open a citation if the claim matters. The model can still be wrong; the viewer is there so you can check.",
   },
   {
-    q: "What can I add?",
-    a: "PDFs, public websites, YouTube videos or playlists, VTT/SRT transcripts, pasted notes, email (paste, .eml, or import from Gmail), calendar (.ics or Google Calendar), Google Drive files you choose from a folder, and MCP tools (GitHub, Jira, Postgres, or pasted JSON). Indexing runs in the background. Chat unlocks when at least one source is Ready, or when a tool is connected.",
-  },
-  {
-    q: "Can I import from Gmail, Calendar, and Drive?",
-    a: "Yes. Connect Google from the add-source dialog — one authorization covers Gmail, Calendar, and Drive. Pick messages, events, or files; they become ordinary sources in that notebook. Paste and .eml / .ics still work without connecting.",
-  },
-  {
     q: "What happens when I delete a source, a chat, or a notebook?",
-    a: "Delete a source and its indexed vectors plus tagged memory leave. Remove every source (or the last one) and Studio artifacts go too — podcast, FAQ, flashcards, briefing, roadmap. Clear chat and the thread, episode vectors, chat memory, knowledge graph, and those Studio artifacts leave — pinned facts and sources stay. Delete a notebook and the whole cupboard goes: files, chat, chunks, memory, Studio, and Mem0 records scoped to it.",
+    a: "Delete a source and its indexed vectors plus tagged memory leave. Remove every source and Studio artifacts go too. Clear chat and the thread, episode vectors, chat memory, knowledge graph, and Studio artifacts leave — pinned facts and sources stay. Delete a notebook and the whole cupboard goes: files, chat, chunks, memory, Studio, and Mem0 records scoped to it.",
   },
   {
     q: "Why do I only see two or three sources under an answer?",
     a: "The reply is written from a wider set of passages. The chips under chat show the strongest two or three unique sources so the desk stays readable. Inline [n] still opens the exact excerpt.",
   },
   {
-    q: "How do voice questions and spoken answers work?",
-    a: "The mic transcribes into the composer. The speaker on an answer first writes a spoken summary with the model, then plays it — OpenAI speech when a key is configured, otherwise the browser voice.",
-  },
-  {
     q: "Are notebooks private from each other?",
-    a: "Yes. Each notebook is its own library, and it belongs to your account. After you sign in with Google or email, you only see your notebooks. Vectors, chat, and memory do not mix across notebooks or across users. Delete a source, chat, or notebook and those embeddings leave with it.",
+    a: "Yes. Each notebook is its own library, and it belongs to your account. After you sign in with Google or email, you only see your notebooks. Vectors, chat, and memory do not mix across notebooks or across users.",
   },
   {
     q: "Do I need an account?",
     a: "Yes, to create or open a notebook. Create an account with email and password, or continue with Google. If you tap New notebook while signed out, the sign-in screen opens first. You can only delete your own notebooks and chats.",
-  },
-  {
-    q: "What is Studio for?",
-    a: "After you have sources, generate a podcast, a YouTube learning roadmap, flashcards, a FAQ, or a briefing. Those cards also sit in the chat column.",
   },
   {
     q: "Does it work on a phone?",
@@ -400,96 +311,105 @@ export function Story() {
   return (
     <>
       <section id="flow" className="scroll-mt-24 pt-8">
-        <Kicker title="How it works" heading="From a pile of files to a cited answer." />
+        <span id="guide" className="sr-only">
+          How to use
+        </span>
+        <Kicker title="How it works" heading="Six moves from a pile of files to a cited answer." />
+        <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+          The stage plays the desk in order — hover or tap a step to stay with it.
+        </p>
         <PipelineStrip />
-        <div className="relative mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {STEPS.map((step, i) => (
-            <motion.article
-              key={step.n}
-              initial={{ opacity: 0, y: 28, rotate: i % 2 === 0 ? -1.2 : 1.2 }}
-              whileInView={{ opacity: 1, y: 0, rotate: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.55, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ y: -8, rotate: i % 2 === 0 ? -0.6 : 0.6 }}
-              className="surface group relative overflow-hidden rounded-3xl p-6"
-            >
-              <motion.span
-                className="pointer-events-none absolute -right-6 -bottom-10 font-heading text-8xl text-chai/10"
-                animate={{ y: [0, -6, 0] }}
-                transition={{ duration: 4 + i * 0.3, repeat: Infinity, ease: "easeInOut" }}
-              >
-                {step.n}
-              </motion.span>
-              <span className="relative font-heading text-3xl text-chai/50 transition group-hover:text-chai">{step.n}</span>
-              <h3 className="relative mt-3 font-heading text-2xl leading-tight">{step.title}</h3>
-              <p className="relative mt-2 text-sm leading-6 text-muted-foreground">{step.body}</p>
-            </motion.article>
-          ))}
-        </div>
+        <FlowStage />
       </section>
 
-      <section className="scroll-mt-24 pt-24">
+      <section id="sources" className="scroll-mt-24 pt-24">
         <Kicker title="Sources" heading="Bring in whatever you are actually studying." />
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="mt-8 flex flex-wrap justify-center gap-2.5 sm:gap-3">
           {SOURCES.map((s, i) => (
             <motion.article
               key={s.title}
-              initial={{ opacity: 0, y: 24, scale: 0.94 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              initial={{ opacity: 0, y: 14, rotate: SOURCE_LEAN[i] }}
+              whileInView={{ opacity: 1, y: 0, rotate: SOURCE_LEAN[i] }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.06, type: "spring", stiffness: 260, damping: 20 }}
-              whileHover={{ y: -8, rotate: i % 2 ? 1.5 : -1.5 }}
-              className="surface rounded-3xl p-5"
+              transition={{ delay: i * 0.04, type: "spring", stiffness: 280, damping: 22 }}
+              whileHover={{ y: -7, rotate: 0, scale: 1.05 }}
+              className="flex items-center gap-2.5 rounded-full border border-border/80 bg-card/75 py-2 pr-4 pl-2 shadow-[0_12px_28px_-20px_color-mix(in_srgb,var(--chai)_40%,transparent)] backdrop-blur-sm"
             >
               <motion.span
-                className="grid size-10 place-items-center rounded-2xl bg-secondary text-chai"
-                animate={{ y: [0, -3, 0] }}
-                transition={{ duration: 2.4 + i * 0.2, repeat: Infinity, ease: "easeInOut" }}
+                className="grid size-8 place-items-center rounded-full bg-secondary text-chai"
+                animate={{ y: [0, -2, 0] }}
+                transition={{ duration: 2.4 + i * 0.18, repeat: Infinity, ease: "easeInOut" }}
               >
-                <s.icon className="size-5" />
+                <s.icon className="size-3.5" />
               </motion.span>
-              <h3 className="mt-4 font-heading text-lg">{s.title}</h3>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">{s.body}</p>
+              <span>
+                <span className="block font-heading text-sm leading-none">{s.title}</span>
+                <span className="mt-0.5 block text-[11px] text-muted-foreground">{s.hint}</span>
+              </span>
             </motion.article>
           ))}
         </div>
+
+        <motion.div
+          id="imports"
+          {...fadeUp}
+          className="surface relative mt-8 overflow-hidden rounded-[1.85rem] p-5 sm:p-7"
+        >
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute -top-16 right-0 size-48 rounded-full bg-chai/18 blur-3xl"
+            animate={{ opacity: [0.35, 0.7, 0.35], scale: [1, 1.12, 1] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <div className="relative flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-medium tracking-[0.16em] text-chai uppercase">From the rest of your desk</p>
+              <h3 className="mt-1 font-heading text-2xl sm:text-3xl">One Google connection. Three doors.</h3>
+              <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+                What you pick becomes a source in this notebook — and leaves when you delete it. Paste and .eml / .ics
+                still work without connecting.
+              </p>
+            </div>
+          </div>
+          <div className="relative mt-6 grid gap-4 sm:grid-cols-3">
+            {GOOGLE.map((item, i) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 + i * 0.08 }}
+                className="relative"
+              >
+                {i < GOOGLE.length - 1 && (
+                  <span className="pointer-events-none absolute top-5 right-[-0.6rem] z-10 hidden h-px w-3 bg-chai/40 sm:block" />
+                )}
+                <div className="flex items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-chai text-chai-foreground shadow-[0_16px_32px_-18px_var(--chai)]">
+                    <item.icon className="size-4" />
+                  </span>
+                  <div>
+                    <p className="font-heading text-xl leading-tight">{item.title}</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.body}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </section>
 
-      <section id="imports" className="scroll-mt-24 pt-24">
-        <Kicker title="From the rest of your desk" heading="Gmail, Calendar, Drive — poured in, not pasted forever." />
-        <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-          One Google connection. Three doors. What you pick becomes a source in this notebook — and leaves when you
-          delete it.
-        </p>
-        <div className="mt-10 grid gap-4 lg:grid-cols-3">
-          {GOOGLE_IMPORTS.map((item, i) => (
-            <motion.article
-              key={item.title}
-              initial={{ opacity: 0, y: 28, rotate: i === 1 ? 1.4 : i === 0 ? -1.4 : 0 }}
-              whileInView={{ opacity: 1, y: 0, rotate: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-              whileHover={{ y: -10, rotate: i === 1 ? 0.8 : i === 0 ? -0.8 : 0.4 }}
-              className="surface group relative overflow-hidden rounded-[1.75rem] p-6"
-            >
-              <motion.span
-                aria-hidden
-                className="pointer-events-none absolute -top-10 -right-8 size-36 rounded-full bg-chai/18 blur-2xl"
-                animate={{ opacity: [0.35, 0.7, 0.35], scale: [1, 1.12, 1] }}
-                transition={{ duration: 5 + i, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <div className="relative flex items-start justify-between gap-3">
-                <span className="grid size-12 place-items-center rounded-2xl bg-chai text-chai-foreground shadow-[0_16px_32px_-18px_var(--chai)]">
-                  <item.icon className="size-5" />
-                </span>
-                <span className="font-heading text-3xl leading-none text-chai/25">{item.mark}</span>
-              </div>
-              <p className="relative mt-5 text-[11px] font-medium tracking-[0.16em] text-chai uppercase">{item.cue}</p>
-              <h3 className="relative mt-1.5 font-heading text-2xl">{item.title}</h3>
-              <p className="relative mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-            </motion.article>
-          ))}
-        </div>
+      <section id="desk" className="scroll-mt-24 pt-24">
+        <span id="features" className="sr-only">
+          Features
+        </span>
+        <Kicker title="Inside a notebook" heading="The desk, not a chatbot in a void." />
+        <DeskBento />
+      </section>
+
+      <section id="use-cases" className="scroll-mt-24 pt-24">
+        <Kicker title="Who it’s for" heading="Built for studying, not browsing." />
+        <AudienceStage />
       </section>
 
       <section id="privacy" className="scroll-mt-24 pt-24">
@@ -498,125 +418,7 @@ export function Story() {
           Memory is notebook-scoped on purpose. When you throw something away, ChaiBook does not keep a quiet copy of
           the embeddings underneath.
         </p>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {WIPE.map((item, i) => (
-            <motion.article
-              key={item.title}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08, duration: 0.5 }}
-              whileHover={{ y: -8 }}
-              className="relative overflow-hidden rounded-[1.75rem] border border-border bg-card p-6"
-            >
-              <motion.span
-                aria-hidden
-                className="pointer-events-none absolute bottom-3 right-4 font-heading text-6xl text-chai/8"
-                animate={{ y: [0, -6, 0], opacity: [0.4, 0.7, 0.4] }}
-                transition={{ duration: 3.6 + i * 0.4, repeat: Infinity, ease: "easeInOut" }}
-              >
-                {String(i + 1).padStart(2, "0")}
-              </motion.span>
-              <span className="grid size-10 place-items-center rounded-2xl bg-secondary text-chai">
-                <item.icon className="size-4" />
-              </span>
-              <p className="mt-5 text-[11px] tracking-[0.14em] text-chai uppercase">{item.crumb}</p>
-              <h3 className="mt-1 font-heading text-xl leading-tight">{item.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-            </motion.article>
-          ))}
-        </div>
-      </section>
-
-      <section id="guide" className="scroll-mt-24 pt-24">
-        <Kicker title="How to use it" heading="A short desk manual." />
-        <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-          Six habits. The stage plays them in order — hover or tap a step to stay with it.
-        </p>
-        <DeskManual />
-      </section>
-
-      <section id="use-cases" className="scroll-mt-24 pt-24">
-        <Kicker title="Use cases" heading="Built for studying, not browsing." />
-        <div className="mt-10 grid gap-4 md:grid-cols-2">
-          {USE_CASES.map((item, i) => (
-            <motion.article
-              key={item.title}
-              initial={{ opacity: 0, y: 32 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.55, delay: i * 0.08 }}
-              whileHover={{ y: -6 }}
-              className={cn(
-                "surface group relative overflow-hidden rounded-3xl p-6 sm:p-7",
-                item.wide && "md:col-span-2 md:grid md:grid-cols-[1.2fr_0.8fr] md:gap-10 md:p-8",
-              )}
-            >
-              <motion.span
-                aria-hidden
-                className="pointer-events-none absolute -top-16 -right-10 size-40 rounded-full bg-chai/15 blur-2xl"
-                animate={{ x: [0, 12, 0], y: [0, 10, 0], opacity: [0.35, 0.6, 0.35] }}
-                transition={{ duration: 6 + i, repeat: Infinity, ease: "easeInOut" }}
-              />
-              <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-linear-to-r from-transparent to-transparent opacity-0 transition group-hover:opacity-100">
-                <span className="absolute inset-y-0 w-16 bg-linear-to-r from-transparent via-chai/15 to-transparent [animation:landing-shine_1.8s_ease]" />
-              </span>
-              <div className="relative">
-                <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium tracking-wide text-chai uppercase">
-                  <item.icon className="size-3.5" />
-                  {item.eyebrow}
-                </span>
-                <h3 className="mt-4 font-heading text-2xl sm:text-3xl">{item.title}</h3>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{item.body}</p>
-              </div>
-              <ul className={cn("relative mt-5 space-y-2 text-sm", item.wide && "md:mt-10")}>
-                {item.points.map((p, pi) => (
-                  <motion.li
-                    key={p}
-                    initial={{ opacity: 0, x: 8 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.15 + pi * 0.08 }}
-                    className="flex gap-2 text-muted-foreground"
-                  >
-                    <CheckIcon className="mt-0.5 size-4 shrink-0 text-chai" />
-                    {p}
-                  </motion.li>
-                ))}
-              </ul>
-            </motion.article>
-          ))}
-        </div>
-      </section>
-
-      <section id="features" className="scroll-mt-24 pt-24">
-        <Kicker title="Inside a notebook" heading="The desk, not a chatbot in a void." />
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((s, i) => (
-            <motion.article
-              key={s.title}
-              initial={{ opacity: 0, y: 20, scale: 0.96 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05, duration: 0.45 }}
-              whileHover={{ y: -7 }}
-              className="surface group rounded-3xl p-5"
-            >
-              <motion.span
-                className="grid size-9 place-items-center rounded-xl bg-secondary text-chai"
-                whileHover={{ rotate: -8, scale: 1.12 }}
-              >
-                <s.icon className="size-4" />
-              </motion.span>
-              <h3 className="mt-4 font-heading text-xl">{s.title}</h3>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{s.body}</p>
-            </motion.article>
-          ))}
-        </div>
-        <motion.p {...fadeUp} className="mt-6 flex items-start gap-2 text-sm leading-6 text-muted-foreground">
-          <PinIcon className="mt-0.5 size-4 shrink-0 text-chai" />
-          On a phone, switch between Sources, Chat, and Studio. On a large screen they sit side by side.
-        </motion.p>
+        <WipeRitual />
       </section>
 
       <Faq />
@@ -624,15 +426,15 @@ export function Story() {
   );
 }
 
-function DeskManual() {
+function FlowStage() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
-  const item = GUIDE[active];
+  const item = FLOW[active];
   const Icon = item.icon;
 
   useEffect(() => {
     if (paused) return;
-    const t = window.setInterval(() => setActive((i) => (i + 1) % GUIDE.length), 4200);
+    const t = window.setInterval(() => setActive((i) => (i + 1) % FLOW.length), 4200);
     return () => window.clearInterval(t);
   }, [paused]);
 
@@ -648,7 +450,7 @@ function DeskManual() {
         <div className="absolute inset-x-0 top-0 h-1 bg-muted">
           <motion.div
             className="h-full bg-chai"
-            animate={{ width: `${((active + 1) / GUIDE.length) * 100}%` }}
+            animate={{ width: `${((active + 1) / FLOW.length) * 100}%` }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           />
         </div>
@@ -658,7 +460,7 @@ function DeskManual() {
               {item.cue}
             </span>
             <span className="font-mono text-[11px] text-muted-foreground">
-              {String(active + 1).padStart(2, "0")} / {String(GUIDE.length).padStart(2, "0")}
+              {String(active + 1).padStart(2, "0")} / {String(FLOW.length).padStart(2, "0")}
               {paused ? " · paused" : ""}
             </span>
           </div>
@@ -698,7 +500,7 @@ function DeskManual() {
       </div>
 
       <ol className="relative flex flex-col gap-1.5">
-        {GUIDE.map((step, i) => {
+        {FLOW.map((step, i) => {
           const StepIcon = step.icon;
           const on = i === active;
           return (
@@ -894,6 +696,233 @@ function GuideScene({ index }: { index: number }) {
   );
 }
 
+function DeskBento() {
+  return (
+    <div className="mt-10 grid gap-4 lg:grid-cols-3">
+      <motion.article
+        {...fadeUp}
+        whileHover={{ y: -6 }}
+        className="surface group relative overflow-hidden rounded-[1.85rem] p-6 sm:p-7 lg:col-span-2"
+      >
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute -top-16 -right-10 size-44 rounded-full bg-chai/18 blur-3xl"
+          animate={{ x: [0, 12, 0], opacity: [0.35, 0.65, 0.35] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <p className="relative text-[11px] font-medium tracking-[0.16em] text-chai uppercase">Ask</p>
+        <h3 className="relative mt-1 font-heading text-3xl">Cited chat with a voice.</h3>
+        <p className="relative mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+          Answers come from this notebook. Tap a citation to open the page, clip, or note. Dictate a question; play a
+          spoken summary that skips the citation numbers.
+        </p>
+        <ul className="relative mt-6 grid gap-3 sm:grid-cols-3">
+          {[
+            { icon: MessageSquareIcon, title: "Cited reply", hint: "Inline [n] chips" },
+            { icon: EyeIcon, title: "Source viewer", hint: "PDF, web, or YouTube" },
+            { icon: Volume2Icon, title: "Spoken summary", hint: "Listen, don’t recite" },
+          ].map((item, i) => (
+            <motion.li
+              key={item.title}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.12 + i * 0.08 }}
+              className="rounded-2xl bg-secondary/70 px-3.5 py-3"
+            >
+              <item.icon className="size-4 text-chai" />
+              <p className="mt-2 font-heading text-lg leading-tight">{item.title}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{item.hint}</p>
+            </motion.li>
+          ))}
+        </ul>
+      </motion.article>
+
+      <motion.article
+        initial={{ opacity: 0, y: 22 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        whileHover={{ y: -6 }}
+        className="surface relative overflow-hidden rounded-[1.85rem] p-6"
+      >
+        <p className="text-[11px] font-medium tracking-[0.16em] text-chai uppercase">Studio</p>
+        <h3 className="mt-1 font-heading text-2xl">Study from the same pile.</h3>
+        <div className="mt-5 space-y-2.5">
+          {[
+            { icon: HeadphonesIcon, title: "Podcast", hint: "Aarav & Meera, from this corpus" },
+            { icon: MapIcon, title: "Roadmap", hint: "YouTube concepts, timestamped" },
+            { icon: LayersIcon, title: "Cards · FAQ · Briefing", hint: "Generated only here" },
+          ].map((item, i) => (
+            <motion.div
+              key={item.title}
+              initial={{ opacity: 0, x: 10 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 + i * 0.1 }}
+              className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/60 px-3 py-2.5"
+            >
+              <span className="grid size-8 place-items-center rounded-xl bg-secondary text-chai">
+                <item.icon className="size-3.5" />
+              </span>
+              <span>
+                <span className="block text-sm font-medium">{item.title}</span>
+                <span className="block text-[11px] text-muted-foreground">{item.hint}</span>
+              </span>
+            </motion.div>
+          ))}
+        </div>
+      </motion.article>
+
+      <motion.article
+        initial={{ opacity: 0, y: 22 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        whileHover={{ y: -6 }}
+        className="surface rounded-[1.85rem] p-6"
+      >
+        <span className="grid size-10 place-items-center rounded-2xl bg-secondary text-chai">
+          <BrainIcon className="size-4" />
+        </span>
+        <h3 className="mt-4 font-heading text-2xl">Memory that stays in the cup.</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Follow-ups remember the thread. Pin a fact so the next question does not forget what you already established.
+        </p>
+        <p className="mt-4 flex items-center gap-2 text-xs text-chai">
+          <PinIcon className="size-3.5" />
+          Notebook-scoped — never mixed
+        </p>
+      </motion.article>
+
+      <motion.article
+        initial={{ opacity: 0, y: 22 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        whileHover={{ y: -6 }}
+        className="surface rounded-[1.85rem] p-6"
+      >
+        <span className="grid size-10 place-items-center rounded-2xl bg-secondary text-chai">
+          <PlugIcon className="size-4" />
+        </span>
+        <h3 className="mt-4 font-heading text-2xl">Live tools on the side.</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Connect GitHub, Jira, Postgres, or paste Claude / VS Code MCP JSON. Chat can call them without leaving the
+          desk.
+        </p>
+      </motion.article>
+
+      <motion.article
+        initial={{ opacity: 0, y: 22 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        whileHover={{ y: -6 }}
+        className="surface rounded-[1.85rem] p-6"
+      >
+        <span className="grid size-10 place-items-center rounded-2xl bg-secondary text-chai">
+          <SmartphoneIcon className="size-4" />
+        </span>
+        <h3 className="mt-4 font-heading text-2xl">Phone or desk.</h3>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          On a phone, switch Sources, Chat, and Studio. On a large screen they sit side by side.
+        </p>
+      </motion.article>
+    </div>
+  );
+}
+
+function AudienceStage() {
+  const [active, setActive] = useState(0);
+  const item = USE_CASES[active];
+  const Icon = item.icon;
+
+  return (
+    <motion.div {...fadeUp} className="mt-8">
+      <div className="flex flex-wrap gap-2">
+        {USE_CASES.map((u, i) => (
+          <button
+            key={u.eyebrow}
+            type="button"
+            onClick={() => setActive(i)}
+            className={cn(
+              "rounded-full px-4 py-2 text-sm font-medium transition",
+              i === active ? "bg-chai text-chai-foreground" : "bg-secondary text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {u.eyebrow}
+          </button>
+        ))}
+      </div>
+      <div className="surface relative mt-5 overflow-hidden rounded-[1.85rem] p-6 sm:p-8">
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute -top-16 -right-10 size-40 rounded-full bg-chai/15 blur-2xl"
+          animate={{ x: [0, 12, 0], y: [0, 10, 0], opacity: [0.35, 0.6, 0.35] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <span className="pointer-events-none absolute inset-y-0 left-0 w-1/3 opacity-40">
+          <span className="absolute inset-y-0 w-16 bg-linear-to-r from-transparent via-chai/15 to-transparent [animation:landing-shine_1.8s_ease]" />
+        </span>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={item.title}
+            initial={{ opacity: 0, y: 14, filter: "blur(6px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -10, filter: "blur(6px)" }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8"
+          >
+            <span className="grid size-14 shrink-0 place-items-center rounded-3xl bg-chai text-chai-foreground shadow-[0_16px_32px_-18px_var(--chai)]">
+              <Icon className="size-6" />
+            </span>
+            <div>
+              <p className="text-[11px] font-medium tracking-[0.16em] text-chai uppercase">{item.eyebrow}</p>
+              <h3 className="mt-1 font-heading text-3xl sm:text-4xl">{item.title}</h3>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">{item.body}</p>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+}
+
+function WipeRitual() {
+  return (
+    <div className="relative mt-10">
+      <motion.div
+        aria-hidden
+        className="absolute top-8 right-[8%] left-[8%] hidden h-px bg-linear-to-r from-transparent via-chai/40 to-transparent md:block"
+        initial={{ scaleX: 0 }}
+        whileInView={{ scaleX: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      />
+      <div className="grid gap-8 md:grid-cols-3">
+        {WIPE.map((item, i) => (
+          <motion.div
+            key={item.title}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: i * 0.1, duration: 0.5 }}
+            className="relative text-center md:px-3"
+          >
+            <motion.span
+              className="mx-auto grid size-14 place-items-center rounded-full border border-chai/25 bg-card text-chai shadow-[0_16px_32px_-20px_var(--chai)]"
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 3.2 + i * 0.35, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <item.icon className="size-5" />
+            </motion.span>
+            <p className="mt-4 text-[11px] tracking-[0.14em] text-chai uppercase">{item.crumb}</p>
+            <h3 className="mt-1 font-heading text-xl leading-tight">{item.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Kicker({ title, heading }: { title: string; heading: string }) {
   return (
     <motion.div {...fadeUp}>
@@ -954,4 +983,3 @@ function Faq() {
     </section>
   );
 }
-

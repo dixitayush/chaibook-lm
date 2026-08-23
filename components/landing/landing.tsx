@@ -25,9 +25,9 @@ const EMOJIS = ["🍵", "📖", "🔬", "🧠", "🎬", "🧭", "🧪", "🌙", 
 const NAV = [
   { href: "#notebooks", label: "Your desk" },
   { href: "#flow", label: "How it works" },
-  { href: "#imports", label: "Gmail & Drive" },
+  { href: "#sources", label: "Sources" },
+  { href: "#desk", label: "The desk" },
   { href: "#privacy", label: "Leave no crumbs" },
-  { href: "#guide", label: "How to use" },
   { href: "#faq", label: "FAQ" },
 ];
 
