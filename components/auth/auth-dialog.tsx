@@ -27,10 +27,25 @@ export function AuthDialog({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(google);
+
+  useEffect(() => {
+    setGoogleEnabled(google);
+  }, [google]);
 
   useEffect(() => {
     if (open) setMode(initialMode);
   }, [open, initialMode]);
+
+  useEffect(() => {
+    if (!open || googleEnabled) return;
+    void fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d: { google?: boolean }) => {
+        if (d.google) setGoogleEnabled(true);
+      })
+      .catch(() => undefined);
+  }, [open, googleEnabled]);
 
   async function submit() {
     setBusy(true);
@@ -73,7 +88,7 @@ export function AuthDialog({
             Notebooks stay on your account. Share one by email when you want someone else on it.
           </DialogDescription>
         </DialogHeader>
-        {google && (
+        {googleEnabled && (
           <>
             <Button type="button" variant="outline" className="w-full" onClick={googleStart}>
               <GoogleMark />

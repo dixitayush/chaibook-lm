@@ -84,8 +84,6 @@ CREATE TABLE IF NOT EXISTS sessions (
   ip TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
-CREATE UNIQUE INDEX IF NOT EXISTS sessions_token_hash_idx ON sessions(token_hash);
-CREATE INDEX IF NOT EXISTS sessions_prev_hash_idx ON sessions(prev_token_hash);
 CREATE TABLE IF NOT EXISTS notebooks (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -214,7 +212,7 @@ ALTER TABLE graph_edges ALTER COLUMN created_at TYPE BIGINT;
 ALTER TABLE episodes ALTER COLUMN created_at TYPE BIGINT;
 `;
 
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 
 export function ensureSchema() {
   if (globalForDb.schemaVersion !== SCHEMA_VERSION) {

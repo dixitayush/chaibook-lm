@@ -51,12 +51,16 @@ export function Landing() {
 
   async function load() {
     try {
-      const me = await fetch("/api/auth/me").then((r) => r.json()) as { user: AuthUser | null; google?: boolean };
-      setUser(me.user);
-      setGoogle(Boolean(me.google));
-      const health = await api<{ llm: boolean; postgres?: boolean }>("/api/health");
+      const me = (await fetch("/api/auth/me").then((r) => r.json()).catch(() => ({}))) as {
+        user?: AuthUser | null;
+        google?: boolean;
+      };
+      setUser(me.user ?? null);
+      if (me.google) setGoogle(true);
+      const health = await api<{ llm: boolean; postgres?: boolean; gmail?: boolean }>("/api/health");
       setLlm(health.llm);
       setPostgres(health.postgres !== false);
+      if (health.gmail) setGoogle(true);
       if (!me.user) {
         setNotebooks([]);
         return;
