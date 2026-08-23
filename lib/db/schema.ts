@@ -25,10 +25,20 @@ export const sessions = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash"),
+    prevTokenHash: text("prev_token_hash"),
     expiresAt: epochMs("expires_at"),
     createdAt: epochMs("created_at"),
+    lastUsedAt: bigint("last_used_at", { mode: "number" }),
+    revokedAt: bigint("revoked_at", { mode: "number" }),
+    userAgent: text("user_agent").notNull().default(""),
+    ip: text("ip").notNull().default(""),
   },
-  (t) => [index("sessions_user_idx").on(t.userId)],
+  (t) => [
+    index("sessions_user_idx").on(t.userId),
+    uniqueIndex("sessions_token_hash_idx").on(t.tokenHash),
+    index("sessions_prev_hash_idx").on(t.prevTokenHash),
+  ],
 );
 
 export const notebooks = pgTable(

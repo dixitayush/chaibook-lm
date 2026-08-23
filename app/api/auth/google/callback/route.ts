@@ -14,5 +14,5 @@ export async function GET(req: Request) {
     const home = publicOrigin(req);
     return NextResponse.redirect(`${home}/?auth=1&error=google`);
   }
-  return finishGoogleLogin(url.searchParams.get("code"), url.searchParams.get("error"), login.csrf);
+  return finishGoogleLogin(url.searchParams.get("code"), url.searchParams.get("error"), login.csrf, req);
 }

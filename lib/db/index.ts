@@ -74,10 +74,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_google_idx ON users(google_id);
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT,
+  prev_token_hash TEXT,
   expires_at BIGINT NOT NULL,
-  created_at BIGINT NOT NULL
+  created_at BIGINT NOT NULL,
+  last_used_at BIGINT,
+  revoked_at BIGINT,
+  user_agent TEXT NOT NULL DEFAULT '',
+  ip TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS sessions_token_hash_idx ON sessions(token_hash);
+CREATE INDEX IF NOT EXISTS sessions_prev_hash_idx ON sessions(prev_token_hash);
 CREATE TABLE IF NOT EXISTS notebooks (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -206,7 +214,7 @@ ALTER TABLE graph_edges ALTER COLUMN created_at TYPE BIGINT;
 ALTER TABLE episodes ALTER COLUMN created_at TYPE BIGINT;
 `;
 
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 
 export function ensureSchema() {
   if (globalForDb.schemaVersion !== SCHEMA_VERSION) {
@@ -226,6 +234,14 @@ export function ensureSchema() {
           /* already present */
         }
         const authCols = [
+          `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS token_hash TEXT;`,
+          `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS prev_token_hash TEXT;`,
+          `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS last_used_at BIGINT;`,
+          `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS revoked_at BIGINT;`,
+          `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_agent TEXT NOT NULL DEFAULT '';`,
+          `ALTER TABLE sessions ADD COLUMN IF NOT EXISTS ip TEXT NOT NULL DEFAULT '';`,
+          `CREATE UNIQUE INDEX IF NOT EXISTS sessions_token_hash_idx ON sessions(token_hash);`,
+          `CREATE INDEX IF NOT EXISTS sessions_prev_hash_idx ON sessions(prev_token_hash);`,
           `ALTER TABLE notebooks ADD COLUMN IF NOT EXISTS user_id TEXT;`,
           `CREATE INDEX IF NOT EXISTS notebooks_user_idx ON notebooks(user_id);`,
           `ALTER TABLE gmail_accounts ADD COLUMN IF NOT EXISTS user_id TEXT;`,

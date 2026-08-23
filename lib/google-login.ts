@@ -1,20 +1,29 @@
+import { timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createSession, upsertGoogleUser } from "@/lib/auth";
+import { OAUTH_COOKIE, authCookieBase } from "@/lib/auth-cookies";
 import { hydrateEnv, publicOrigin } from "@/lib/env";
 import { redirectUri } from "@/lib/gmail";
+
+function sameSecret(a: string, b: string) {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  if (left.length !== right.length || left.length === 0) return false;
+  return timingSafeEqual(left, right);
+}
 
 function homeUrl() {
   return publicOrigin();
 }
 
-export async function finishGoogleLogin(code: string | null, err: string | null, csrf: string) {
+export async function finishGoogleLogin(code: string | null, err: string | null, csrf: string, req?: Request) {
   const home = homeUrl();
   const fail = NextResponse.redirect(`${home}/?auth=1&error=google`);
   const store = await cookies();
-  const expected = store.get("chaibook_oauth")?.value;
-  store.set("chaibook_oauth", "", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 0 });
-  if (err || !code || !expected || csrf !== expected) return fail;
+  const expected = store.get(OAUTH_COOKIE)?.value;
+  store.set(OAUTH_COOKIE, "", { ...authCookieBase(), maxAge: 0 });
+  if (err || !code || !expected || !sameSecret(csrf, expected)) return fail;
 
   hydrateEnv();
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -38,6 +47,6 @@ export async function finishGoogleLogin(code: string | null, err: string | null,
   if (!me.email || !me.id) return fail;
 
   const user = await upsertGoogleUser({ googleId: me.id, email: me.email, name: me.name || "" });
-  await createSession(user.id);
+  await createSession(user.id, req);
   return NextResponse.redirect(`${home}/?signed=1`);
 }

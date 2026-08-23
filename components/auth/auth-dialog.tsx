@@ -102,12 +102,12 @@ export function AuthDialog({
           />
           <Input
             type="password"
-            placeholder={mode === "signup" ? "Password (8+ characters)" : "Password"}
+            placeholder={mode === "signup" ? "Password (10+ chars, letter + number)" : "Password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
             required
-            minLength={mode === "signup" ? 8 : undefined}
+            minLength={mode === "signup" ? 10 : undefined}
           />
           <Button type="submit" className="w-full" disabled={busy}>
             {busy ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}

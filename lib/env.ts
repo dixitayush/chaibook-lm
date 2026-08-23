@@ -15,6 +15,7 @@ const FILE_KEYS = [
   "RESEND_API_KEY",
   "MAIL_FROM",
   "REDIS_URL",
+  "AUTH_SECRET",
 ] as const;
 
 function parseEnvFile(path: string) {

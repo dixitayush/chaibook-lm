@@ -73,6 +73,7 @@ APP_URL="${APP_URL:-$(env_get .env APP_URL)}"
 OPENAI_API_KEY="${OPENAI_API_KEY:-$(env_get .env OPENAI_API_KEY)}"
 GEMINI_API_KEY="${GEMINI_API_KEY:-$(env_get .env GEMINI_API_KEY)}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(env_get .env POSTGRES_PASSWORD)}"
+AUTH_SECRET="${AUTH_SECRET:-$(env_get .env AUTH_SECRET)}"
 
 # Local-dev APP_URL in the example is http://localhost — treat that as unset on VPS.
 if [[ "${APP_URL:-}" == http://localhost* ]]; then
@@ -106,6 +107,15 @@ if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
   fi
 fi
 
+if [[ -z "${AUTH_SECRET:-}" || "${#AUTH_SECRET}" -lt 32 ]]; then
+  if command -v openssl >/dev/null; then
+    AUTH_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
+  else
+    AUTH_SECRET="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 48)"
+  fi
+  log "Generated AUTH_SECRET and wrote it to .env."
+fi
+
 [[ -n "${CHAIBOOK_HOST:-}" ]] || die "Set CHAIBOOK_HOST (e.g. chaibook.ayushdixit.work)."
 [[ "${APP_URL:-}" == https://* ]] || die "Set APP_URL to the public https URL."
 [[ -n "${OPENAI_API_KEY:-}" || -n "${GEMINI_API_KEY:-}" ]] || \
@@ -115,6 +125,7 @@ fi
 upsert_env .env CHAIBOOK_HOST "$CHAIBOOK_HOST"
 upsert_env .env APP_URL "$APP_URL"
 upsert_env .env POSTGRES_PASSWORD "$POSTGRES_PASSWORD"
+upsert_env .env AUTH_SECRET "$AUTH_SECRET"
 [[ -n "${OPENAI_API_KEY:-}" ]] && upsert_env .env OPENAI_API_KEY "$OPENAI_API_KEY"
 [[ -n "${GEMINI_API_KEY:-}" ]] && upsert_env .env GEMINI_API_KEY "$GEMINI_API_KEY"
 

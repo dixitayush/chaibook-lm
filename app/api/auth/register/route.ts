@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { createPasswordUser, createSession, findUserByEmail, toPublicUser, validEmail } from "@/lib/auth";
+import {
+  createPasswordUser,
+  createSession,
+  findUserByEmail,
+  passwordIssue,
+  toPublicUser,
+  validEmail,
+} from "@/lib/auth";
 import { ensureSchema } from "@/lib/db";
 import { clientIp, limitOrResponse } from "@/lib/rate-limit";
 
@@ -14,8 +21,8 @@ export async function POST(req: Request) {
   const password = body.password || "";
   const name = (body.name || "").trim();
   if (!validEmail(email)) return NextResponse.json({ error: "Enter a valid email." }, { status: 400 });
-  if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
-  if (password.length > 200) return NextResponse.json({ error: "Password is too long." }, { status: 400 });
+  const passwordError = passwordIssue(password);
+  if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
   const existing = await findUserByEmail(email);
   if (existing) {
     if (existing.googleId && !existing.passwordHash) {
@@ -24,6 +31,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "An account with that email already exists. Sign in instead." }, { status: 409 });
   }
   const row = await createPasswordUser({ email, password, name });
-  await createSession(row.id);
+  await createSession(row.id, req);
   return NextResponse.json({ user: toPublicUser(row) });
 }

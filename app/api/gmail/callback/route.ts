@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   const err = url.searchParams.get("error");
   const rawState = url.searchParams.get("state") || "";
   const login = decodeLoginState(rawState);
-  if (login) return finishGoogleLogin(code, err, login.csrf);
+  if (login) return finishGoogleLogin(code, err, login.csrf, req);
 
   const { notebookId, origin: rawOrigin, kind } = decodeGmailState(rawState);
   const origin = sanitizePublicOrigin(rawOrigin, req);

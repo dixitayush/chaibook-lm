@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
+import { OAUTH_COOKIE, authCookieBase } from "@/lib/auth-cookies";
 import { encodeLoginState, googleOAuthConfigured, redirectUri } from "@/lib/gmail";
 import { hydrateEnv, publicOrigin } from "@/lib/env";
 
@@ -17,13 +18,7 @@ export async function GET(req: Request) {
   const origin = publicOrigin(req);
   const csrf = randomBytes(16).toString("hex");
   const store = await cookies();
-  store.set("chaibook_oauth", csrf, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: (process.env.APP_URL || "").startsWith("https://"),
-    maxAge: 600,
-  });
+  store.set(OAUTH_COOKIE, csrf, { ...authCookieBase(), maxAge: 600 });
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_OAUTH_CLIENT_ID || "",
     redirect_uri: redirectUri(),
