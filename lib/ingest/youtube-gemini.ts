@@ -83,9 +83,9 @@ export async function transcribeYouTubeWithGemini(videoId: string): Promise<Cue[
       const cues = parseCues(text);
       if (cues.length) return cues;
       if (status === 200) return [];
-      if (status !== 404) return [];
+      if (status !== 404) continue;
     } catch {
-      return [];
+      continue;
     }
   }
   return [];

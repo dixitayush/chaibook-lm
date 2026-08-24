@@ -1,5 +1,5 @@
 import { transcribeYouTubeWithGemini } from "@/lib/ingest/youtube-gemini";
-import { chunkText, chunkTimed, type RawChunk } from "@/lib/rag/chunk";
+import { chunkTimed, type RawChunk } from "@/lib/rag/chunk";
 import { youtubeEmbedUrl, youtubeWatchUrl } from "@/lib/youtube-urls";
 
 export { youtubeEmbedUrl, youtubeWatchUrl };
@@ -348,6 +348,13 @@ function mergeDetails(into: VideoDetails, extra: VideoDetails) {
 
 function cuesFromDetails(details: VideoDetails): Cue[] {
   const cues: Cue[] = [];
+  if (details.title) {
+    cues.push({
+      text: [details.title, details.author ? `by ${details.author}` : ""].filter(Boolean).join(" "),
+      start: 0,
+      end: 2,
+    });
+  }
   if (details.chapters.length) {
     for (let i = 0; i < details.chapters.length; i++) {
       const ch = details.chapters[i];
@@ -360,10 +367,10 @@ function cuesFromDetails(details: VideoDetails): Cue[] {
     }
   }
   const desc = (details.description || "").trim();
-  if (desc.length > 40) {
-    const sentences = desc.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 12);
-    let t = 0;
-    for (const sentence of sentences) {
+  if (desc) {
+    const sentences = desc.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 8);
+    let t = 2;
+    for (const sentence of sentences.length ? sentences : [desc]) {
       cues.push({ text: sentence.trim(), start: t, end: t + 8 });
       t += 8;
     }
@@ -569,6 +576,12 @@ function extractAssignedJson(html: string, name: string) {
   return null;
 }
 
+function playabilityOf(player: unknown): string {
+  const p = (player as { playabilityStatus?: { status?: string; reason?: string } } | null)?.playabilityStatus;
+  if (!p?.status || p.status === "OK") return "";
+  return (p.reason || p.status).trim();
+}
+
 function playerFromWatchHtml(html: string) {
   return extractAssignedJson(html, "ytInitialPlayerResponse");
 }
@@ -581,22 +594,27 @@ function watchLooksBlocked(html: string) {
 }
 
 async function fetchWatchPage(videoId: string) {
-  const watch = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=en&persist_hl=1`, {
-    headers: {
-      "User-Agent": UA,
-      "Accept-Language": "en-US,en;q=0.9",
-      Cookie: YT_COOKIE,
-      Accept: "text/html,application/xhtml+xml",
-    },
-    redirect: "follow",
-  });
-  if (!watch.ok) return { html: "", apiKey: null as string | null, blocked: true };
-  const html = await watch.text();
-  return {
-    html,
-    apiKey: html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1] ?? null,
-    blocked: watchLooksBlocked(html),
-  };
+  try {
+    const watch = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=en&persist_hl=1`, {
+      headers: {
+        "User-Agent": UA,
+        "Accept-Language": "en-US,en;q=0.9",
+        Cookie: YT_COOKIE,
+        Accept: "text/html,application/xhtml+xml",
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!watch.ok) return { html: "", apiKey: null as string | null, blocked: true };
+    const html = await watch.text();
+    return {
+      html,
+      apiKey: html.match(/"INNERTUBE_API_KEY":"([^"]+)"/)?.[1] ?? null,
+      blocked: watchLooksBlocked(html),
+    };
+  } catch {
+    return { html: "", apiKey: null as string | null, blocked: true };
+  }
 }
 
 async function playerViaInnertube(
@@ -672,64 +690,80 @@ async function cuesViaBlindTimedtext(videoId: string): Promise<Cue[]> {
   return cuesFromTracks(tracks);
 }
 
-async function fetchTranscript(videoId: string): Promise<{ cues: Cue[]; details: VideoDetails }> {
+async function fetchTranscript(videoId: string): Promise<{ cues: Cue[]; details: VideoDetails; playability: string }> {
   const collected: CaptionTrack[] = [];
   const details: VideoDetails = { chapters: [] };
   let initialData: unknown;
   let visitorData: string | null = null;
   let apiKey: string | null = null;
+  let playability = "";
 
-  try {
-    const watch = await fetchWatchPage(videoId);
-    apiKey = watch.apiKey;
-    initialData = extractAssignedJson(watch.html, "ytInitialData");
-    visitorData = visitorFrom(initialData) || visitorFrom(playerFromWatchHtml(watch.html));
-    const player = playerFromWatchHtml(watch.html);
-    if (player) mergeDetails(details, detailsFromPlayer(player));
-    if (initialData) mergeDetails(details, { chapters: chaptersFrom(initialData) });
+  const android = INNERTUBE_CLIENTS.find((c) => c.name === "ANDROID")!;
+  const [watch, androidPlayer] = await Promise.all([
+    fetchWatchPage(videoId),
+    playerViaInnertube(videoId, android, null, null),
+  ]);
 
-    const panelCues = await cuesViaGetTranscript(videoId, apiKey, initialData, visitorData);
-    if (panelCues.length) return { cues: panelCues, details };
+  apiKey = watch.apiKey;
+  initialData = extractAssignedJson(watch.html, "ytInitialData");
+  const htmlPlayer = playerFromWatchHtml(watch.html);
+  visitorData = visitorFrom(initialData) || visitorFrom(htmlPlayer) || visitorFrom(androidPlayer);
 
-    const fromHtml = tracksFromPlayer(player, UA);
-    collected.push(...fromHtml);
-    const htmlCues = await cuesFromTracks(fromHtml);
-    if (htmlCues.length) return { cues: htmlCues, details };
+  if (htmlPlayer) mergeDetails(details, detailsFromPlayer(htmlPlayer));
+  if (initialData) mergeDetails(details, { chapters: chaptersFrom(initialData) });
+  if (androidPlayer) {
+    mergeDetails(details, detailsFromPlayer(androidPlayer));
+    playability = playabilityOf(androidPlayer) || playabilityOf(htmlPlayer);
+  } else {
+    playability = playabilityOf(htmlPlayer);
+  }
 
-    for (const spec of INNERTUBE_CLIENTS) {
-      try {
-        const remote = await playerViaInnertube(videoId, spec, apiKey, visitorData);
-        if (remote) {
-          mergeDetails(details, detailsFromPlayer(remote));
-          visitorData = visitorData || visitorFrom(remote);
-        }
-        const tracks = tracksFromPlayer(remote, spec.ua);
-        collected.push(...tracks);
-        const cues = await cuesFromTracks(tracks);
-        if (cues.length) return { cues, details };
-      } catch {
-        /* try next client */
+  const panelCues = await cuesViaGetTranscript(videoId, apiKey, initialData, visitorData);
+  if (panelCues.length) return { cues: panelCues, details, playability };
+
+  const fromHtml = tracksFromPlayer(htmlPlayer, UA);
+  collected.push(...fromHtml);
+  const htmlCues = await cuesFromTracks(fromHtml);
+  if (htmlCues.length) return { cues: htmlCues, details, playability };
+
+  const fromAndroid = tracksFromPlayer(androidPlayer, android.ua);
+  collected.push(...fromAndroid);
+  const androidCues = await cuesFromTracks(fromAndroid);
+  if (androidCues.length) return { cues: androidCues, details, playability };
+
+  for (const spec of INNERTUBE_CLIENTS) {
+    if (spec.name === "ANDROID") continue;
+    try {
+      const remote = await playerViaInnertube(videoId, spec, apiKey, visitorData);
+      if (remote) {
+        mergeDetails(details, detailsFromPlayer(remote));
+        visitorData = visitorData || visitorFrom(remote);
+        playability = playability || playabilityOf(remote);
       }
+      const tracks = tracksFromPlayer(remote, spec.ua);
+      collected.push(...tracks);
+      const cues = await cuesFromTracks(tracks);
+      if (cues.length) return { cues, details, playability };
+    } catch {
+      /* try next client */
     }
-  } catch {
-    /* keep going */
   }
 
   const innertubeCues = await cuesViaGetTranscript(videoId, apiKey, initialData, visitorData);
-  if (innertubeCues.length) return { cues: innertubeCues, details };
+  if (innertubeCues.length) return { cues: innertubeCues, details, playability };
 
   const timed = await tracksViaTimedtext(videoId);
   collected.push(...timed);
   const timedCues = await cuesFromTracks(timed);
-  if (timedCues.length) return { cues: timedCues, details };
+  if (timedCues.length) return { cues: timedCues, details, playability };
 
   const leftover = await cuesFromTracks(collected);
-  if (leftover.length) return { cues: leftover, details };
+  if (leftover.length) return { cues: leftover, details, playability };
 
   const blind = await cuesViaBlindTimedtext(videoId);
-  if (blind.length) return { cues: blind, details };
+  if (blind.length) return { cues: blind, details, playability };
 
-  return { cues: [], details };
+  return { cues: [], details, playability };
 }
 
 async function cuesFromTracks(tracks: CaptionTrack[]): Promise<Cue[]> {
@@ -751,12 +785,17 @@ async function cuesFromTracks(tracks: CaptionTrack[]): Promise<Cue[]> {
 }
 
 export async function oembedYouTube(url: string) {
-  const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
-    headers: { "User-Agent": UA, Cookie: YT_COOKIE },
-  });
-  if (!res.ok) return { title: "YouTube video", author: "" };
-  const data = (await res.json()) as { title?: string; author_name?: string };
-  return { title: data.title || "YouTube video", author: data.author_name || "" };
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
+      headers: { "User-Agent": UA, Cookie: YT_COOKIE },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return { title: "YouTube video", author: "" };
+    const data = (await res.json()) as { title?: string; author_name?: string };
+    return { title: data.title || "YouTube video", author: data.author_name || "" };
+  } catch {
+    return { title: "YouTube video", author: "" };
+  }
 }
 
 export async function extractYouTube(url: string): Promise<{
@@ -783,6 +822,11 @@ export async function extractYouTube(url: string): Promise<{
     }
   }
 
+  if (!fetched.details.title && meta.title && meta.title !== "YouTube video") {
+    fetched.details.title = meta.title;
+  }
+  if (!fetched.details.author && meta.author) fetched.details.author = meta.author;
+
   if (!cues.length) {
     const fromPage = cuesFromDetails(fetched.details);
     if (fromPage.length) {
@@ -794,8 +838,18 @@ export async function extractYouTube(url: string): Promise<{
   const title = fetched.details.title || meta.title;
   const channel = fetched.details.author || meta.author;
   if (!cues.length) {
+    if (/age|sign in|login/i.test(fetched.playability)) {
+      throw new Error(
+        `YouTube blocked this video (${fetched.playability}). Age-restricted or login-only clips cannot be indexed from the server — upload a .vtt transcript.`,
+      );
+    }
+    if (fetched.playability) {
+      throw new Error(
+        `YouTube will not play this video (${fetched.playability}). Use a public video, or upload a .vtt transcript.`,
+      );
+    }
     throw new Error(
-      "Could not read this video. It may be private, age-restricted, or blocked from this server. Try a public video, or upload a .vtt transcript.",
+      "Could not read captions for this video from the server. Reindex after deploy, or upload a .vtt transcript.",
     );
   }
 
@@ -804,15 +858,14 @@ export async function extractYouTube(url: string): Promise<{
     meta: { ...c.meta, videoId, url: watchUrl },
   }));
   const text = cues.map((c) => c.text).join(" ");
-  const chunks =
-    timed.length || !text.trim()
-      ? timed
-      : transcriptSource === "description"
-        ? chunkText(text, { videoId, url: watchUrl })
-        : [{ content: text.slice(0, 8000), meta: { videoId, url: watchUrl } }];
+  const chunks = timed.length
+    ? timed
+    : text.trim()
+      ? [{ content: text.slice(0, 8000), meta: { videoId, url: watchUrl } }]
+      : [];
   if (!chunks.length) {
     throw new Error(
-      "Could not read this video. It may be private, age-restricted, or blocked from this server. Try a public video, or upload a .vtt transcript.",
+      "Could not read captions for this video from the server. Reindex after deploy, or upload a .vtt transcript.",
     );
   }
   return { videoId, title, channel, text, chunks, transcriptSource };

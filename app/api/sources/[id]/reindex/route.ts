@@ -9,7 +9,7 @@ import { indexSource } from "@/lib/ingest/pipeline";
 import type { IdRoute } from "@/lib/route";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(_req: Request, ctx: IdRoute) {
   await ensureSchema();
