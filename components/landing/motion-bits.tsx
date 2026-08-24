@@ -178,7 +178,7 @@ export function DeskPreview() {
           </div>
           <div className="space-y-2 bg-sidebar/80 p-3">
             <p className="text-[10px] font-medium tracking-wide text-chai uppercase">Studio</p>
-            {["Podcast", "Roadmap", "Flashcards"].map((name, i) => (
+            {["Podcast", "Explainer", "Roadmap"].map((name, i) => (
               <motion.div
                 key={name}
                 initial={{ opacity: 0, y: 8 }}

@@ -433,7 +433,7 @@ export function Workspace({ notebookId }: { notebookId: string }) {
         open={deleteAll}
         onOpenChange={setDeleteAll}
         title="Remove every source?"
-        description="The notebook stays empty. Every file, its vectors, source-tagged memory, leftover chat episodes, the knowledge graph, and Studio artifacts (podcast, FAQ, cards, briefing, roadmap) leave with them."
+        description="The notebook stays empty. Every file, its vectors, source-tagged memory, leftover chat episodes, the knowledge graph, and Studio artifacts (podcast, explainer, FAQ, cards, briefing, roadmap) leave with them."
         confirmLabel="Remove all"
         onConfirm={async () => {
           await api(`/api/notebooks/${notebookId}/sources`, { method: "DELETE" });

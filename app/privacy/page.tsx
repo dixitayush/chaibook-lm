@@ -33,7 +33,7 @@ const SECTIONS: LegalSection[] = [
     kicker: "Why it is there",
     title: "To run the desk you asked for — not a second product.",
     body: [
-      "We use this data to authenticate you, isolate notebooks, retrieve passages, stream cited answers, generate studio pieces (briefings, flashcards, podcasts, roadmaps), enforce rate limits, and send optional mail such as share invites if email is configured.",
+      "We use this data to authenticate you, isolate notebooks, retrieve passages, stream cited answers, generate studio pieces (briefings, explainers, flashcards, podcasts, roadmaps), enforce rate limits, and send optional mail such as share invites if email is configured.",
       "Health checks and error logs may record that a request happened. We do not build advertising profiles or sell lists of readers.",
     ],
   },

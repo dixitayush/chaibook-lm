@@ -19,7 +19,7 @@ export async function GET(_req: Request, ctx: IdRoute) {
   const suggestions: string[] = [];
   if (ready.length > 1) {
     suggestions.push("Where do these sources agree, and where do they conflict?");
-    suggestions.push("Synthesize the core argument across every source, with citations.");
+    suggestions.push("Give me a structured overview that connects the dots across these sources.");
   }
   if (ready.some((s) => s.type === "youtube")) {
     suggestions.push("What should I learn first from the videos, and in what order?");

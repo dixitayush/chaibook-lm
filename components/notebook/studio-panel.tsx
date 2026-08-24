@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { PauseIcon, PlayIcon, BrainIcon, PlugIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import type { PodcastSegment, RoadmapNode, StudioArtifact } from "@/lib/types";
+import type { ExplainerPayload, ExplainerScene, PodcastSegment, RoadmapNode, StudioArtifact } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,6 +124,9 @@ export function StudioPanel({
           </button>
 
           {latest("podcast") && <PodcastPlayer artifact={latest("podcast")!} />}
+          {latest("explainer") && (
+            <ExplainerView artifact={latest("explainer")!} onOpenSource={onOpenSource} />
+          )}
           {latest("roadmap") && (
             <RoadmapView
               artifact={latest("roadmap")!}
@@ -138,6 +141,139 @@ export function StudioPanel({
         </div>
       </ScrollArea>
     </div>
+  );
+}
+
+function ExplainerView({
+  artifact,
+  onOpenSource,
+}: {
+  artifact: StudioArtifact;
+  onOpenSource: (sourceId: string, startTime?: number) => void;
+}) {
+  const payload = artifact.payload as ExplainerPayload;
+  const scenes = useMemo(() => payload.scenes || [], [payload.scenes]);
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const scene: ExplainerScene | undefined = scenes[i];
+  const urls = useMemo(
+    () => scenes.map((s) => (s.audioBase64 ? `data:${s.mimeType || "audio/mpeg"};base64,${s.audioBase64}` : null)),
+    [scenes],
+  );
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, []);
+
+  function speakBrowser(seg: ExplainerScene, index: number) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(seg.narration);
+    const voices = window.speechSynthesis.getVoices();
+    u.voice = voices.find((v) => /female|samantha|victoria|karen|meera/i.test(v.name)) || voices[1] || null;
+    u.rate = 1.02;
+    u.onend = () => {
+      if (index + 1 < scenes.length) playAt(index + 1);
+      else setPlaying(false);
+    };
+    window.speechSynthesis.speak(u);
+  }
+
+  function playAt(index: number) {
+    setI(index);
+    setPlaying(true);
+    const url = urls[index];
+    const seg = scenes[index];
+    if (url) {
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.src = url;
+      void audio.play();
+      audio.onended = () => {
+        if (index + 1 < scenes.length) playAt(index + 1);
+        else setPlaying(false);
+      };
+    } else if (seg) {
+      speakBrowser(seg, index);
+    }
+  }
+
+  function toggle() {
+    if (playing) {
+      audioRef.current?.pause();
+      window.speechSynthesis?.cancel();
+      setPlaying(false);
+      return;
+    }
+    playAt(i);
+  }
+
+  if (!scene) return null;
+
+  return (
+    <section className="rounded-2xl bg-secondary/60 p-4 ring-1 ring-border">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-xs text-chai">Video overview · Explainer</p>
+          <h3 className="font-heading text-lg leading-tight">{payload.title}</h3>
+          {payload.thesis && <p className="mt-1 text-sm text-muted-foreground">{payload.thesis}</p>}
+        </div>
+        <Button size="icon" onClick={toggle}>
+          {playing ? <PauseIcon /> : <PlayIcon />}
+        </Button>
+      </div>
+      <audio ref={audioRef} className="hidden" />
+      <div className="mt-4 rounded-2xl bg-card p-4 ring-1 ring-chai/20">
+        <p className="text-[11px] font-medium tracking-[0.14em] text-chai uppercase">
+          Scene {i + 1} / {scenes.length}
+        </p>
+        <p className="mt-2 font-heading text-2xl leading-tight">{scene.heading}</p>
+        {scene.visual && scene.visual !== scene.heading && (
+          <p className="mt-2 text-sm italic text-chai/90">{scene.visual}</p>
+        )}
+        <p className="mt-3 text-sm leading-6">{scene.narration}</p>
+        {!!scene.bullets?.length && (
+          <ul className="mt-3 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+            {scene.bullets.map((b) => (
+              <li key={b}>{b}</li>
+            ))}
+          </ul>
+        )}
+        {scene.sourceId && (
+          <button
+            type="button"
+            onClick={() => onOpenSource(scene.sourceId!, scene.startTime)}
+            className="mt-3 text-left text-[11px] text-chai hover:underline"
+          >
+            {scene.sourceTitle}
+            {scene.startTime != null ? ` · ${formatTime(scene.startTime)}` : ""}
+          </button>
+        )}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {scenes.map((s, idx) => (
+          <button
+            key={`${s.heading}-${idx}`}
+            type="button"
+            onClick={() => {
+              window.speechSynthesis?.cancel();
+              audioRef.current?.pause();
+              setPlaying(false);
+              setI(idx);
+            }}
+            className={
+              idx === i
+                ? "rounded-full bg-chai px-2.5 py-1 text-[11px] text-white"
+                : "rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground"
+            }
+          >
+            {idx + 1}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

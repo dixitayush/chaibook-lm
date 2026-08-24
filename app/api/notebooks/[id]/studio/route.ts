@@ -8,11 +8,11 @@ import { createId } from "@/lib/id";
 import { chatJson, hasLlmKey } from "@/lib/llm/client";
 import { synthesizeSegment } from "@/lib/llm/tts";
 import { clientIp, limitOrResponse } from "@/lib/rate-limit";
-import type { PodcastSegment } from "@/lib/types";
+import type { ExplainerScene, PodcastSegment } from "@/lib/types";
 import type { IdRoute } from "@/lib/route";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 export async function GET(_req: Request, ctx: IdRoute) {
   await ensureSchema();
@@ -36,7 +36,7 @@ export async function POST(req: Request, ctx: IdRoute) {
   }
   const nb = gate.notebook;
   const body = (await req.json()) as {
-    kind?: "podcast" | "roadmap" | "guide" | "faq" | "cards";
+    kind?: "podcast" | "roadmap" | "guide" | "faq" | "cards" | "explainer";
     focus?: string;
   };
   const kind = body.kind || "guide";
@@ -130,6 +130,45 @@ export async function POST(req: Request, ctx: IdRoute) {
     );
     title = data.title || `Flashcards · ${nb.title}`;
     payload = data;
+  } else if (kind === "explainer") {
+    const data = await chatJson<{
+      title: string;
+      thesis: string;
+      scenes: {
+        heading: string;
+        narration: string;
+        bullets: string[];
+        visual: string;
+        sourceTitle?: string;
+        startTime?: number;
+      }[];
+    }>(
+      "You write a Video Overview in Explainer format: a structured, comprehensive walkthrough that connects the dots within the sources. Do not list each source in isolation. Show how claims relate, reinforce, or contradict each other. 6-9 scenes. Each scene is one visual beat a host would narrate over a slide.",
+      `Notebook: ${nb.title}\nSources:\n${sourceList}\n\nExcerpts:\n${corpus}${focus}\n\nJSON: {"title":string,"thesis":string,"scenes":[{"heading":string,"narration":string,"bullets":string[],"visual":string,"sourceTitle":string,"startTime":number}]}`,
+    );
+    const scenes: ExplainerScene[] = [];
+    for (const scene of (data.scenes || []).slice(0, 9)) {
+      const match =
+        ready.find(
+          (s) =>
+            scene.sourceTitle &&
+            s.title.toLowerCase().includes(scene.sourceTitle.toLowerCase().slice(0, 24)),
+        ) || ready[Math.min(scenes.length, ready.length - 1)];
+      const spoken = await synthesizeSegment(scene.narration, "female");
+      scenes.push({
+        heading: scene.heading,
+        narration: scene.narration,
+        bullets: scene.bullets || [],
+        visual: scene.visual || scene.heading,
+        sourceId: match?.id,
+        sourceTitle: match?.title || scene.sourceTitle,
+        startTime: scene.startTime,
+        audioBase64: spoken.audioBase64,
+        mimeType: spoken.mimeType,
+      });
+    }
+    title = data.title || `Explainer · ${nb.title}`;
+    payload = { title, thesis: data.thesis, scenes, tts: scenes.some((s) => s.audioBase64) };
   } else {
     const data = await chatJson<{
       title: string;

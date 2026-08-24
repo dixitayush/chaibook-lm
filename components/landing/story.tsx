@@ -17,6 +17,7 @@ import {
   HeadphonesIcon,
   MapIcon,
   LayersIcon,
+  PresentationIcon,
   PinIcon,
   EyeIcon,
   MicIcon,
@@ -85,7 +86,7 @@ const FLOW = [
     icon: LayersIcon,
     title: "Study, then pin",
     cue: "Studio + memory",
-    body: "Turn the same corpus into a podcast, roadmap, flashcards, FAQ, or briefing. Pin a fact so the next question does not forget it.",
+    body: "Turn the same corpus into a podcast, explainer, roadmap, flashcards, FAQ, or briefing. Pin a fact so the next question does not forget it.",
   },
 ];
 
@@ -147,7 +148,7 @@ const USE_CASES = [
     icon: LibraryIcon,
     title: "A YouTube course",
     eyebrow: "Self-learners",
-    body: "Paste a playlist. A roadmap walks concepts in order — click a node and the clip plays from the cited moment.",
+    body: "Paste a playlist. Generate an explainer that connects the talks, then a roadmap — click a node and the clip plays from the cited moment.",
   },
   {
     icon: BriefcaseIcon,
@@ -199,6 +200,7 @@ const MARQUEE = [
   "Voice in",
   "Spoken summary",
   "Podcast",
+  "Explainer",
   "Roadmap",
   "Flashcards",
   "Memory",
@@ -679,7 +681,7 @@ function GuideScene({ index }: { index: number }) {
   return (
     <div className="flex h-full items-center justify-center">
       <div className="flex gap-3">
-        {["Podcast", "Roadmap", "Cards"].map((label, i) => (
+        {["Podcast", "Explainer", "Roadmap"].map((label, i) => (
           <motion.div
             key={label}
             initial={{ y: 24, opacity: 0 }}
@@ -750,6 +752,7 @@ function DeskBento() {
         <div className="mt-5 space-y-2.5">
           {[
             { icon: HeadphonesIcon, title: "Podcast", hint: "Aarav & Meera, from this corpus" },
+            { icon: PresentationIcon, title: "Explainer", hint: "A structured overview that connects the dots" },
             { icon: MapIcon, title: "Roadmap", hint: "YouTube concepts, timestamped" },
             { icon: LayersIcon, title: "Cards · FAQ · Briefing", hint: "Generated only here" },
           ].map((item, i) => (

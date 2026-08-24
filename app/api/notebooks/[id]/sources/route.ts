@@ -13,7 +13,7 @@ import { SOURCE_TYPES, type SourceType } from "@/lib/types";
 import type { IdRoute } from "@/lib/route";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 function detectType(input: { type?: string; url?: string; filename?: string; text?: string }): SourceType {
   if (input.type && (SOURCE_TYPES as readonly string[]).includes(input.type)) {

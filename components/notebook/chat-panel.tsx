@@ -539,7 +539,7 @@ export function ChatPanel({
         open={clearOpen}
         onOpenChange={setClearOpen}
         title="Clear this chat?"
-        description="The thread, chat memory, episode vectors, knowledge graph, and Studio artifacts (podcast, FAQ, cards, briefing, roadmap) leave. Sources and pinned facts stay."
+        description="The thread, chat memory, episode vectors, knowledge graph, and Studio artifacts (podcast, explainer, FAQ, cards, briefing, roadmap) leave. Sources and pinned facts stay."
         confirmLabel="Clear"
         onConfirm={async () => {
           await fetch(`/api/notebooks/${notebookId}/messages`, { method: "DELETE" });

@@ -66,6 +66,7 @@ export async function indexSource(sourceId: string) {
       title = source.title === "YouTube video" || !source.title ? yt.title : source.title;
       meta.videoId = yt.videoId;
       meta.channel = yt.channel;
+      meta.transcriptSource = yt.transcriptSource;
     } else if (type === "transcript") {
       const parsed = extractTranscript(text, meta.filename || title);
       extracted = parsed.chunks;

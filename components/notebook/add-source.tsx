@@ -290,11 +290,18 @@ export function AddSourceDialog({
           <Input placeholder="Optional title" value={title} onChange={(e) => setTitle(e.target.value)} />
         )}
         {(kind === "website" || kind === "youtube") && (
-          <Input
-            placeholder={kind === "youtube" ? "https://youtube.com/watch?v=… or playlist" : "https://"}
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-          />
+          <>
+            <Input
+              placeholder={kind === "youtube" ? "https://youtube.com/watch?v=… or playlist" : "https://"}
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+            />
+            {kind === "youtube" && (
+              <p className="text-[11px] text-muted-foreground">
+                Public videos index even without captions. A .vtt file is optional if you already have one.
+              </p>
+            )}
+          </>
         )}
         {kind === "text" && <Textarea placeholder="Paste source text" value={text} onChange={(e) => setText(e.target.value)} />}
         {(kind === "pdf" || kind === "transcript") && (

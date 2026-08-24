@@ -64,6 +64,12 @@ export function SourceViewer({
               {citation.heading ? ` · ${citation.heading}` : ""}
             </p>
           )}
+          {source.type === "youtube" && source.metadata.transcriptSource === "gemini" && (
+            <p className="text-[11px] text-muted-foreground">Transcribed with Gemini — the video had no captions.</p>
+          )}
+          {source.type === "youtube" && source.metadata.transcriptSource === "description" && (
+            <p className="text-[11px] text-muted-foreground">Indexed from the video description — captions were unavailable.</p>
+          )}
         </div>
         <Button variant="ghost" size="icon-sm" onClick={onClose}>
           <XIcon />

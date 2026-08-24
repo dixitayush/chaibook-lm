@@ -38,6 +38,7 @@ export type SourceMeta = ChunkMeta & {
   calendarName?: string;
   eventCount?: number;
   driveFileId?: string;
+  transcriptSource?: "captions" | "gemini" | "description";
 };
 
 export type Citation = {
@@ -106,7 +107,7 @@ export type Source = {
   authorId?: string | null;
 };
 
-export type ArtifactType = "podcast" | "roadmap" | "guide" | "faq" | "cards";
+export type ArtifactType = "podcast" | "roadmap" | "guide" | "faq" | "cards" | "explainer";
 
 export type MemoryItem = {
   id: string;
@@ -148,6 +149,25 @@ export type RoadmapNode = {
   startTime?: number;
   endTime?: number;
   why: string;
+};
+
+export type ExplainerScene = {
+  heading: string;
+  narration: string;
+  bullets: string[];
+  visual: string;
+  sourceId?: string;
+  sourceTitle?: string;
+  startTime?: number;
+  audioBase64?: string;
+  mimeType?: string;
+};
+
+export type ExplainerPayload = {
+  title: string;
+  thesis: string;
+  scenes: ExplainerScene[];
+  tts?: boolean;
 };
 
 export type StudioArtifact = {

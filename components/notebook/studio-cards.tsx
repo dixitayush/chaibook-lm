@@ -1,9 +1,9 @@
 "use client";
 
-import { BookIcon, HeadphonesIcon, HelpCircleIcon, LayersIcon, MapIcon } from "lucide-react";
+import { BookIcon, HeadphonesIcon, HelpCircleIcon, LayersIcon, MapIcon, PresentationIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type StudioKind = "podcast" | "roadmap" | "guide" | "faq" | "cards";
+export type StudioKind = "podcast" | "roadmap" | "guide" | "faq" | "cards" | "explainer";
 
 export const STUDIO_CARDS: {
   kind: StudioKind;
@@ -13,6 +13,7 @@ export const STUDIO_CARDS: {
   needsYoutube?: boolean;
 }[] = [
   { kind: "podcast", icon: HeadphonesIcon, label: "Podcast", hint: "Aarav + Meera" },
+  { kind: "explainer", icon: PresentationIcon, label: "Explainer", hint: "Connects the dots" },
   { kind: "roadmap", icon: MapIcon, label: "Roadmap", hint: "From your videos", needsYoutube: true },
   { kind: "guide", icon: BookIcon, label: "Briefing", hint: "Study guide" },
   { kind: "faq", icon: HelpCircleIcon, label: "FAQ", hint: "Cited Q&A" },

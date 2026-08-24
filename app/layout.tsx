@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s · ChaiBook LM",
   },
   description:
-    "NotebookLM-style RAG workspace: isolated notebooks, hybrid pgvector retrieval, cited streaming chat, quality-loop memory, podcasts, roadmaps, flashcards, and a source viewer.",
+    "NotebookLM-style RAG workspace: isolated notebooks, hybrid pgvector retrieval, cited streaming chat, quality-loop memory, podcasts, explainers, roadmaps, flashcards, and a source viewer.",
   applicationName: "ChaiBook LM",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
